@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="script.toolkit.sample" name="Toolkit sample" version="1.1.0" provider-name="Toolkit contributors">
+  <requires><import addon="xbmc.python" version="3.0.0"/></requires>
+  <extension point="xbmc.python.script" library="default.py"/>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">A disposable validation sample</summary>
+    <description lang="en_GB">A local fixture showing a bounded Kodi script entry point.</description>
+    <platform>all</platform><license>MIT</license>
+    <source>https://example.org/toolkit-sample</source>
+    <assets><icon>resources/icon.png</icon></assets>
+  </extension>
+</addon>

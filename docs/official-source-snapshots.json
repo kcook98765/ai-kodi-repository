@@ -1,0 +1,58 @@
+{
+  "observed_utc": "2026-10-21",
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Matrix/version.txt",
+      "sha256": "2f96d5657f573dfa242a21fb7c91e7bbcbc9e50b6725e94a2ab102ba9a4b5e49",
+      "observed_addon_api": "19.1.0"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Nexus/version.txt",
+      "sha256": "36f206445cc1938389a9b75c830abaaa5904395023f385a91f00d9fa6d0884aa",
+      "observed_addon_api": "20.5.0"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Omega/version.txt",
+      "sha256": "4c23c968f0cee56389cd717f7ccc8f8bcf4bf5a5d989bb305ad6d43822067de8",
+      "observed_addon_api": "21.3.0"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Piers/version.txt",
+      "sha256": "4b240069e565d9fcbf88d8f070fd771595aaed8e34080c3d9d0e7fd38022ab0a",
+      "observed_addon_api": "21.90.901"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Matrix/addons/xbmc.python/addon.xml",
+      "sha256": "844ec86a7c981a43493bb0692d8b4a21bb141a098a0509c38eadc26eac7fac16"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Matrix/addons/xbmc.addon/repository.xsd",
+      "sha256": "857889ebe7da3afc89ef881147d3ab7c0d79c9a3c0f7ff97856ae3418b1cc8c4"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Nexus/addons/xbmc.python/addon.xml",
+      "sha256": "8f461fbda037a4c50ed0688249e4835f69c45fd74bb5f768f854c365ed933fea"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Nexus/addons/xbmc.addon/repository.xsd",
+      "sha256": "857889ebe7da3afc89ef881147d3ab7c0d79c9a3c0f7ff97856ae3418b1cc8c4"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Omega/addons/xbmc.python/addon.xml",
+      "sha256": "8f461fbda037a4c50ed0688249e4835f69c45fd74bb5f768f854c365ed933fea"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Omega/addons/xbmc.addon/repository.xsd",
+      "sha256": "857889ebe7da3afc89ef881147d3ab7c0d79c9a3c0f7ff97856ae3418b1cc8c4"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Piers/addons/xbmc.python/addon.xml",
+      "sha256": "0ee57924d482517045a04dcb1a7b28e53536d1ea0714a6464a9c6685ca54c81f"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/xbmc/xbmc/Piers/addons/xbmc.addon/repository.xsd",
+      "sha256": "857889ebe7da3afc89ef881147d3ab7c0d79c9a3c0f7ff97856ae3418b1cc8c4"
+    }
+  ],
+  "note": "Moving branch snapshots retained privately; not claims of native compatibility."
+}

@@ -1,0 +1,20 @@
+{
+  "note": "Schema example only. False approvals intentionally block intake. Evidence must be independently reviewed.",
+  "package_sha256": "REPLACE_WITH_REVIEWED_SHA256",
+  "source_repository": "https://github.com/OWNER/ADDON",
+  "source_commit": "REPLACE_WITH_EXACT_40_HEX_COMMIT",
+  "runtime_files": {
+    "addon.xml": "REPLACE_WITH_FILE_SHA256",
+    "LICENSE.txt": "REPLACE_WITH_FILE_SHA256"
+  },
+  "release_approved": false,
+  "rights_approved": false,
+  "fixture_only": false,
+  "compatibility": {
+    "nexus": {
+      "static_accepted": false,
+      "runtime_accepted": false,
+      "evidence": []
+    }
+  }
+}

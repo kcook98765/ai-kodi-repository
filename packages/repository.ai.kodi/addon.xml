@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<addon id="repository.ai.kodi" version="0.1.0" name="AI Kodi Repository" provider-name="AI Kodi repository maintainers">
+  <requires>
+    <import addon="xbmc.addon" version="19.0.0" />
+  </requires>
+  <extension point="xbmc.addon.repository">
+    <dir minversion="19.0.0" maxversion="19.9.999">
+      <info>https://kcook98765.github.io/ai-kodi-repository/catalogs/matrix/addons.xml</info>
+      <checksum verify="sha256">https://kcook98765.github.io/ai-kodi-repository/catalogs/matrix/addons.xml.sha256</checksum>
+      <datadir>https://kcook98765.github.io/ai-kodi-repository/packages/</datadir>
+      <artdir>https://kcook98765.github.io/ai-kodi-repository/artwork/matrix/</artdir>
+      <hashes>sha256</hashes>
+    </dir>
+    <dir minversion="20.0.0" maxversion="20.9.999">
+      <info>https://kcook98765.github.io/ai-kodi-repository/catalogs/nexus/addons.xml</info>
+      <checksum verify="sha256">https://kcook98765.github.io/ai-kodi-repository/catalogs/nexus/addons.xml.sha256</checksum>
+      <datadir>https://kcook98765.github.io/ai-kodi-repository/packages/</datadir>
+      <artdir>https://kcook98765.github.io/ai-kodi-repository/artwork/nexus/</artdir>
+      <hashes>sha256</hashes>
+    </dir>
+    <dir minversion="21.0.0" maxversion="21.9.999">
+      <info>https://kcook98765.github.io/ai-kodi-repository/catalogs/omega/addons.xml</info>
+      <checksum verify="sha256">https://kcook98765.github.io/ai-kodi-repository/catalogs/omega/addons.xml.sha256</checksum>
+      <datadir>https://kcook98765.github.io/ai-kodi-repository/packages/</datadir>
+      <artdir>https://kcook98765.github.io/ai-kodi-repository/artwork/omega/</artdir>
+      <hashes>sha256</hashes>
+    </dir>
+    <dir minversion="21.90.0" maxversion="22.9.999">
+      <info>https://kcook98765.github.io/ai-kodi-repository/catalogs/piers/addons.xml</info>
+      <checksum verify="sha256">https://kcook98765.github.io/ai-kodi-repository/catalogs/piers/addons.xml.sha256</checksum>
+      <datadir>https://kcook98765.github.io/ai-kodi-repository/packages/</datadir>
+      <artdir>https://kcook98765.github.io/ai-kodi-repository/artwork/piers/</artdir>
+      <hashes>sha256</hashes>
+    </dir>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Independent Kodi add-on distribution</summary>
+    <description lang="en_GB">Reviewed independent add-ons, selected by Kodi version.</description>
+    <platform>all</platform>
+    <license>MIT</license>
+    <source>https://github.com/kcook98765/ai-kodi-repository</source>
+    <assets>
+      <icon>resources/icon.png</icon>
+    </assets>
+  </extension>
+</addon>

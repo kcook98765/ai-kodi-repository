@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "github_repository": "kcook98765/ai-kodi-repository",
+  "base_url": "https://kcook98765.github.io/ai-kodi-repository/",
+  "addon_id": "repository.ai.kodi",
+  "version": "0.1.0",
+  "provider": "AI Kodi repository maintainers",
+  "lanes": {
+    "matrix": {
+      "major": 19,
+      "minversion": "19.0.0",
+      "maxversion": "19.9.999",
+      "builtins": {
+        "xbmc.addon": "19.0.0",
+        "xbmc.python": "3.0.0"
+      }
+    },
+    "nexus": {
+      "major": 20,
+      "minversion": "20.0.0",
+      "maxversion": "20.9.999",
+      "builtins": {
+        "xbmc.addon": "20.0.0",
+        "xbmc.python": "3.0.1"
+      }
+    },
+    "omega": {
+      "major": 21,
+      "minversion": "21.0.0",
+      "maxversion": "21.9.999",
+      "builtins": {
+        "xbmc.addon": "21.0.0",
+        "xbmc.python": "3.0.1"
+      }
+    },
+    "piers": {
+      "major": 22,
+      "minversion": "21.90.0",
+      "maxversion": "22.9.999",
+      "builtins": {
+        "xbmc.addon": "21.90.0",
+        "xbmc.python": "3.1.0"
+      }
+    }
+  },
+  "publication_authorized": false,
+  "fixture_version": "0.0.0"
+}
