@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only source, infrastructure-site and optional public HTTPS qualification."""
+"""Read-only source, reviewed production-site and optional HTTPS qualification."""
 import argparse
 import json
 from pathlib import Path
@@ -54,43 +54,43 @@ def source_audit():
             'scope':'Selected Git source files; pattern scan is not a proof of secret absence'}
 
 def site_audit(plan):
+    repo.require(plan.get('profile') == 'production' and not plan.get('release_blockers'),
+                 'Only an approved production plan can pass publication preflight')
     repo.verify('production')
-    config = repo.load_config()
-    repo.require(json.loads((ROOT/'config/production.json').read_text())['packages']==[],
-                 'This initial-publication gate accepts infrastructure only')
-    repo.require(len(plan['packages'])==1 and
-                 plan['packages'][0]['id']==config['addon_id'] and
-                 plan['packages'][0]['version']==config['version'] and
-                 plan['packages'][0]['fixture_only'] is False,
-                 'Unexpected initial-publication package')
+    repo.require(plan == json.loads((ROOT/'dist/production/release-plan.json').read_text()),
+                 'Plan differs from verified on-disk production plan')
+    independent = audit_candidate.audit('production')
     paths = {'.nojekyll','index.html'}
-    aid = config['addon_id']
-    package = f'packages/{aid}/{aid}-{config["version"]}.zip'
-    paths.update([package,package+'.sha256'])
-    for lane in config['lanes']:
-        catalog = 'catalogs/'+lane+'/addons.xml'
-        paths.update([catalog,catalog+'.sha256',f'artwork/{lane}/{aid}/resources/icon.png'])
-        repo.require(plan['catalogs'][lane]['ids']=={aid:config['version']},
-                     'Unexpected catalog entry')
+    for record in plan['packages']:
+        repo.require(record['fixture_only'] is False, 'Fixture in production')
+        paths.update([record['path'],record['path']+'.sha256'])
+        manifest, files = repo.inspect_zip((ROOT/'dist/production/site'/record['path']).read_bytes())
+        for name,data in files.items():
+            scan_bytes(record['id']+'/'+name,data)
+    for lane,record in plan['catalogs'].items():
+        catalog = record['path']
+        paths.update([catalog,catalog+'.sha256'])
+        for manifest in repo.parse_xml((ROOT/'dist/production/site'/catalog).read_bytes()):
+            for asset in manifest.findall("extension[@point='xbmc.addon.metadata']/assets/*"):
+                paths.add(f'artwork/{lane}/{manifest.get("id")}/{asset.text}')
     repo.require(set(plan['site_files'])==paths, 'Unreviewed or missing public site files')
     for path in sorted(paths):
         scan_bytes(path,repo.safe_path(ROOT/'dist/production/site',path).read_bytes())
-    return {'status':'PASS','site_files':len(paths),'only_repository_installer':True}
+    return {'status':'PASS','site_files':len(paths),'only_repository_installer':len(plan['packages'])==1,
+            'reviewed_packages':len(independent['packages'])}
 
 def public_https(plan):
     base = repo.load_config()['base_url']
     receipts = []
     for path,digest in sorted(plan['site_files'].items()):
-        # .nojekyll is a Pages build control and is not served by GitHub Pages.
-        if path == '.nojekyll':
-            continue
         url = base+path
         with urlopen(Request(url,method='HEAD'),timeout=20) as head:
             repo.require(head.status==200 and head.geturl()==url, 'Unexpected HEAD redirect/status')
             head_type = head.headers.get('Content-Type','')
         with urlopen(url,timeout=20) as response:
-            data = response.read(2_000_001)
-            repo.require(response.status==200 and response.geturl()==url and len(data)<=2_000_000,
+            limit = repo.MAX_ZIP_BYTES if path.endswith('.zip') else 2_000_000
+            data = response.read(limit+1)
+            repo.require(response.status==200 and response.geturl()==url and len(data)<=limit,
                          'Unexpected GET redirect/status/size')
             content_type = response.headers.get('Content-Type','')
         repo.require(repo.sha(data)==digest, 'Public bytes mismatch: '+path)
@@ -98,10 +98,12 @@ def public_https(plan):
             repo.require('text/html' not in content_type and 'text/html' not in head_type,
                          'HTML instead of repository artifact')
         receipts.append({'url':url,'head':200,'get':200,'content_type':content_type,'sha256':digest})
-    negatives = ['qualification/catalogs/nexus/addons.xml',
-                 'qualification/packages/script.toolkit.sample/script.toolkit.sample-1.0.0.zip',
-                 'packages/plugin.video.tastemade/plugin.video.tastemade-1.0.0.zip',
-                 'packages/skin.aura/skin.aura-1.0.0.zip']
+    negatives = ['qualification/catalogs/nexus/addons.xml', 'candidate/catalogs/nexus/addons.xml']
+    # Check only unadmitted runtime directories; admitted add-ons must be reachable.
+    for source in sorted((ROOT/'fixtures').glob('*/*/addon.xml')):
+        manifest = repo.parse_xml(source.read_bytes())
+        negatives.append(f'packages/{manifest.get("id")}/{manifest.get("id")}-{manifest.get("version")}.zip')
+    negatives = sorted(set(negatives)-set(plan['site_files']))
     for path in negatives:
         try:
             with urlopen(base+path,timeout=20):
@@ -110,7 +112,7 @@ def public_https(plan):
             repo.require(error.code==404, 'Expected excluded-artifact HTTP 404')
     return {'status':'PASS','public_https_verified':True,'tls':'System certificate verification enabled',
             'responses':receipts,'excluded_artifact_404s':negatives,
-            'note':'.nojekyll is verified in the hosting Git tree, not as a served URL'}
+            'note':'Includes .nojekyll; excluded paths are derived from private profiles and fixtures'}
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)

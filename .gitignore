@@ -4,6 +4,7 @@
 /reports/
 /incoming/*
 !/incoming/README.md
+/config/candidate.json
 __pycache__/
 *.pyc
 .env*
