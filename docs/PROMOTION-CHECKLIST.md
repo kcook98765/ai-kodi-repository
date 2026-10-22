@@ -6,6 +6,8 @@ user approval. It is not an executable workflow and grants no permission.
 - Owner/repository, visibility and verified name availability:
 - Reviewed source snapshot/commit and branch protection:
 - Add-on IDs/versions, source commits, rights and accepted lane/platform evidence:
+- Approval schema/policy version, attributable rights/technical/final decisions:
+- Owner acknowledgment, unresolved risks and runtime deferrals (all must be resolved for v2 production):
 - `release-plan.json` SHA-256 and independent reviewer report digest:
 - Complete Release asset names/hashes and retained prior-release ledger hash:
 - Complete Pages site manifest hash; qualification paths/fixtures excluded:

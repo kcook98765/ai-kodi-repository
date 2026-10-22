@@ -1,11 +1,11 @@
 {
-  "note": "Schema example only. False approvals intentionally block intake. Evidence must be independently reviewed.",
-  "package_sha256": "REPLACE_WITH_REVIEWED_SHA256",
+  "note": "Schema v2 template only; zero digests are placeholders. False approvals block intake. Each recorded decision needs actor, role, UTC timestamp, rationale and reviewed evidence. See APPROVAL-CONTRACT.md.",
+  "package_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
   "source_repository": "https://github.com/OWNER/ADDON",
-  "source_commit": "REPLACE_WITH_EXACT_40_HEX_COMMIT",
+  "source_commit": "0000000000000000000000000000000000000000",
   "runtime_files": {
-    "addon.xml": "REPLACE_WITH_FILE_SHA256",
-    "LICENSE.txt": "REPLACE_WITH_FILE_SHA256"
+    "addon.xml": "0000000000000000000000000000000000000000000000000000000000000000",
+    "LICENSE.txt": "0000000000000000000000000000000000000000000000000000000000000000"
   },
   "release_approved": false,
   "rights_approved": false,
@@ -14,7 +14,28 @@
     "nexus": {
       "static_accepted": false,
       "runtime_accepted": false,
-      "evidence": []
+      "evidence": [],
+      "runtime_test": {
+        "status": "pending"
+      }
     }
-  }
+  },
+  "schema_version": 2,
+  "approval_policy": "strict-v1",
+  "approval_lanes": [
+    "nexus"
+  ],
+  "rights_review": {
+    "status": "pending"
+  },
+  "technical_release": {
+    "status": "pending"
+  },
+  "release_decision": {
+    "status": "pending"
+  },
+  "owner_acknowledgment": {
+    "status": "not_recorded"
+  },
+  "unresolved_risks": []
 }

@@ -11,8 +11,8 @@ to publish. User approval must bind the concrete result.
    runtime-file allowlist, deterministic ZIP and source/file/ZIP SHA-256.
 2. The tester supplies version/platform-specific static and native acceptance,
    warnings and limitations. The release reviewer independently inspects frozen
-   bytes, dependency closure, rights and evidence. Unreleased Tastemade and Aura
-   inspection packages remain inadmissible.
+   bytes, dependency closure, rights and evidence. Packages with unresolved
+   rights, runtime or release gates remain inadmissible to production.
 3. The operator verifies and copies only approved ZIP/evidence into `incoming/`.
    `config/production.json` lists zip, sha256, review_record,
    review_record_sha256 and selected lanes. Review records contain package_sha256,
@@ -20,6 +20,11 @@ to publish. User approval must bind the concrete result.
    release_approved, rights_approved, fixture_only=false and compatibility entries
    with static_accepted, runtime_accepted and evidence references. Evidence is
    human reviewed; booleans do not authenticate its claims.
+   New records should use the version 2 [approval contract](APPROVAL-CONTRACT.md)
+   and [schema](REVIEW-RECORD-SCHEMA.json): separately record rights review,
+   owner acknowledgment, technical approval, runtime results/deferrals and final
+   release approval. Legacy valid records retain their boolean contract. No
+   acknowledgment or deferral replaces a required approval or completed test.
 4. The manager builds local candidates, verifies catalogs/sidecars/dependencies,
    compares whole-site repeat builds, checks historical retention, and prepares
    a release plan containing exact package/feed hashes and intended actions.
