@@ -113,7 +113,8 @@ class PublicationTests(unittest.TestCase):
             for name in ['config','packages','releases']:
                 shutil.copytree(r.ROOT/name,root/name)
             shutil.copy(r.ROOT/'LICENSE',root/'LICENSE')
-            with patch.object(r,'ROOT',root),patch.object(publication,'ROOT',root):
+            with patch.object(r,'ROOT',root),patch.object(publication,'ROOT',root), \
+                    patch.object(publication.audit_candidate,'ROOT',root):
                 r.build('production')
                 path=root/'dist/production/release-plan.json'
                 plan=json.loads(path.read_text())
@@ -123,7 +124,7 @@ class PublicationTests(unittest.TestCase):
                 plan['site_files'][name]=r.sha(file.read_bytes())
                 plan['site_manifest_sha256']=r.sha(r.json_bytes(plan['site_files']))
                 path.write_bytes(r.json_bytes(plan))
-                with self.assertRaisesRegex(ValueError,'public site files'):
+                with self.assertRaisesRegex(AssertionError,'public site files'):
                     publication.site_audit(plan)
 
 if __name__=='__main__':unittest.main()
