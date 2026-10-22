@@ -59,6 +59,24 @@ Aura's GUI API and external provider/helper dependencies need separately reviewe
 lane data before admission. File-based `library` declarations are checked now;
 directory-based module libraries need extension-specific validation before use.
 
+The independent auditor derives packages and lane membership from hashed review
+records and the retention ledger, then compares the complete generated ZIP,
+catalog, artwork and release-mirror inventory. It does not import builder code or
+use the plan itself as proof of approval. Ordinary video add-ons use this same
+path; there is no fixture/installer-only type allowlist. Skin archives can be
+inspected structurally, but production skin admission still needs reviewed GUI
+API/provider dependency data and lane/runtime evidence. This change adds no such
+data and does not qualify Aura.
+
+Private candidate qualification uses ignored `config/candidate.json`, the same
+ZIP/hash/source/runtime allowlist schema and `--profile candidate`. It permits
+explicit false rights/release/static/runtime decisions, retains those blockers
+in the plan and independent audit, and writes only `dist/candidate/` with
+`candidate/` URL prefixes. Production preflight rejects candidate plans. Candidate
+catalog membership is a proposed test lane, not compatibility acceptance. Use a
+separate disposable copy of this repository for real candidate inputs; never
+promote candidate output or change production inputs to simulate approval.
+
 # Hosting arrangement
 
 Use GitHub Pages at `https://kcook98765.github.io/ai-kodi-repository/` for
@@ -95,7 +113,10 @@ per ID/lane, while old downloads remain available. The builder never deletes old
 outputs and rejects changed bytes at an existing package path. Ledger entries
 prevent removal or replacement of retained historical inputs. Clean restoration
 must reacquire all ledger packages from approved pinned Releases and verify them
-before building. Installer updates follow the same version/byte policy.
+before building. Installer updates follow the same version/byte policy. The
+current generated installer is included before its ledger hash is checked;
+historical installer versions enter as reviewed packages with no current lanes.
+The ledger remains operator-maintained; these tools do not add entries for you.
 
 # Reproducibility and security
 

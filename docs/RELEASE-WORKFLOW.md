@@ -56,3 +56,40 @@ marked, use `qualification/` URLs and installer version 0.0.0, and must never be
 included in a production deployment. Production's initial infrastructure version is 0.1.0. The user-authorized initial
 source/Pages setup is separate from these offline tools; their dry-run authority
 flags remain false. No real add-on release is approved by that setup.
+
+## Private candidate qualification
+
+Before rights/native approval, copy this source into an isolated staging area
+without Git, agent configuration or existing distribution outputs. In that copy,
+place only the allowlisted runtime ZIP and a truthful review record in `incoming/`.
+Create ignored `config/candidate.json` using the production input schema and
+proposed lanes. Keep `rights_approved`, `release_approved` and unobserved acceptance
+false. Records must still bind the exact source commit, ZIP and every runtime
+file; dependency, path, resource and manifest controls apply unchanged.
+
+```sh
+python3 -B scripts/repository.py build --profile candidate
+python3 -B scripts/repository.py verify --profile candidate
+python3 -B scripts/audit_candidate.py --profile candidate
+python3 -B scripts/qualify.py --profile candidate
+```
+
+A structural PASS with release blockers does not make the package releasable.
+The preview installer has private URLs and must not be installed or published.
+If a retention ledger pins the current production installer, a preview with
+different installer bytes fails closed; use a separately reviewed test repository
+identity for any future native candidate-feed installation.
+Do not create synthetic rights or runtime approvals for a real candidate. The
+production checker accepts only a production plan, independently rechecks its
+reviewed intake and ledger, and scans extracted runtime files as well as the
+complete site. Candidate and fixture output must never be deployed.
+
+After genuine approvals, production deterministic qualification is explicit:
+`python3 -B scripts/qualify.py --profile production`. The default remains fixture
+qualification for existing role tools. `check_publication.py --https` is a
+read-only check of already promoted production bytes, including `.nojekyll`;
+never use candidate data as a public HTTPS expectation. Ordinary approved
+packages and historical downloads replace the initial installer-only assumptions.
+Canonical ZIP order, 1980 timestamps and regular 0644 entries remain required by
+the independent audit. Numeric x.y.z versions, file-based library declarations
+and the existing external dependency-snapshot restriction remain unchanged.
