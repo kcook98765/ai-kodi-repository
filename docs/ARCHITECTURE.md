@@ -47,6 +47,12 @@ Nexus lane; no Matrix/Omega/Piers Python stub qualification is claimed.
 
 Production manifests require reviewed per-lane static/runtime acceptance records,
 source commit and repository, redistribution rights and exact ZIP/runtime hashes.
+The versioned [approval contract](APPROVAL-CONTRACT.md) preserves that strict
+policy. Version 2 adds attributable rights, owner acknowledgment, technical and
+final release decisions, explicit runtime deferrals and unresolved risk reports.
+Acknowledgment never supplies rights; deferred testing never supplies acceptance.
+Every unresolved v2 risk blocks production. Legacy records retain their original
+boolean meaning and report their attribution/evidence limitations explicitly.
 The current numeric version comparator accepts only x.y.z and fails closed on
 Kodi suffixes/epochs. Extending it requires Kodi-equivalent comparison tests.
 Required dependencies resolve within that lane plus explicit built-in API floors.
@@ -62,9 +68,12 @@ directory-based module libraries need extension-specific validation before use.
 The independent auditor derives packages and lane membership from hashed review
 records and the retention ledger, then compares the complete generated ZIP,
 catalog, artwork and release-mirror inventory. It does not import builder code or
-use the plan itself as proof of approval. Ordinary video add-ons use this same
-path; there is no fixture/installer-only type allowlist. Skin archives can be
-inspected structurally, but production skin admission still needs reviewed GUI
+use the plan itself as proof of approval. Both consumers apply the shared
+versioned approval contract to separately loaded hashed records, and the auditor
+independently enforces production gates
+and compares the plan's approval report with those records. Ordinary add-ons use
+this same path; there is no fixture/installer-only type allowlist. Skin archives
+can be inspected structurally, but production skin admission still needs reviewed GUI
 API/provider dependency data and lane/runtime evidence. This change adds no such
 data and does not qualify Aura.
 

@@ -36,6 +36,7 @@ Kodi Agent Toolkit and matching static-validation evidence; see
 [agent integration](docs/AGENT-INTEGRATION.md). Never deploy `dist/fixture/`.
 
 See [architecture](docs/ARCHITECTURE.md), [release workflow](docs/RELEASE-WORKFLOW.md),
+[approval contract and migration](docs/APPROVAL-CONTRACT.md),
 [monitoring design](docs/MONITORING.md), [source references](docs/SOURCES.md), and
 [contributing](CONTRIBUTING.md), [hosting](docs/HOSTING.md), and
 [native agent readiness](plans/MANAGER-READINESS.md).

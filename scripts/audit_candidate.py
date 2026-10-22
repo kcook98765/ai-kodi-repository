@@ -5,6 +5,7 @@ Never imports the builder, executes add-ons or treats generated plan inventories
 as approval. Candidate results describe structural qualification only.
 """
 import argparse
+import approval_contract
 import copy
 import hashlib
 import io
@@ -127,7 +128,6 @@ def reviewed_inputs(config, profile):
         assert re.fullmatch('[0-9a-f]{40}', record['source_commit'])
         assert record['source_repository'].startswith('https://github.com/')
         assert all(type(record[k]) is bool for k in ['rights_approved', 'release_approved'])
-        if profile == 'production': assert record['rights_approved'] and record['release_approved']
         assert len(item['lanes']) == len(set(item['lanes']))
         for lane in item['lanes']:
             assert lane in config['lanes']
@@ -135,14 +135,28 @@ def reviewed_inputs(config, profile):
             assert all(type(acceptance[k]) is bool for k in ['static_accepted', 'runtime_accepted'])
             assert isinstance(acceptance['evidence'], list)
             assert all(isinstance(e, str) and e.strip() for e in acceptance['evidence'])
-            if profile == 'production':
-                assert acceptance['static_accepted'] and acceptance['runtime_accepted'] and acceptance['evidence']
+        approval = approval_contract.assess(record, item['lanes'])
+        approval['review_record_sha256'] = digest(raw)
+        approval['package_sha256'] = digest(blob)
+        # Independently enforce every strict production gate, even if a plan lies.
+        if profile == 'production':
+            assert record['rights_approved'] and record['release_approved']
+            assert not approval['release_blockers'], 'Outstanding approval gates'
+            for lane in item['lanes']:
+                accepted = record['compatibility'][lane]
+                assert accepted['static_accepted'] and accepted['runtime_accepted'] and accepted['evidence']
+            if record.get('schema_version', 1) == 2:
+                assert record['technical_release']['status'] == 'approved'
+                assert record['rights_review']['status'] == 'verified'
+                assert record['release_decision']['status'] == 'approved'
+                assert not record['unresolved_risks']
+                assert all(record['compatibility'][lane]['runtime_test']['status'] == 'passed' for lane in item['lanes'])
         manifest, files = archive_files(blob)
         assert {n:digest(b) for n,b in files.items()} == record['runtime_files']
         key = (manifest.get('id'), manifest.get('version'))
         assert key not in expected
         expected[key] = {'blob': blob, 'files': files, 'lanes': item['lanes'],
-                         'fixture_only': False, 'provenance': record}
+                         'fixture_only': False, 'provenance': record, 'approval': approval}
     for old in json.loads((ROOT/'releases/manifest.json').read_text())['packages']:
         if (old['id'], old['version']) == (config['addon_id'], config['version']):
             continue  # Generated installer is checked with the complete inventory below.
@@ -184,6 +198,7 @@ def audit(profile='fixture'):
     intake_path = 'config/candidate.json' if profile == 'candidate' else 'config/production.json'
     assert plan['input_config_sha256'] == digest((ROOT/intake_path).read_bytes())
     assert plan['retention_ledger_sha256'] == digest((ROOT/'releases/manifest.json').read_bytes())
+    assert plan['toolchain']['approval_contract_sha256'] == digest(Path(approval_contract.__file__).read_bytes())
     expected = reviewed_inputs(config, profile)
     installer_version = config['fixture_version'] if profile == 'fixture' else config['version']
     installer_source = ROOT/'packages'/config['addon_id']
@@ -211,6 +226,7 @@ def audit(profile='fixture'):
     for record in plan['packages']:
         key = (record['id'], record['version']); reviewed = expected[key]
         assert record['lanes'] == reviewed['lanes'] and record['fixture_only'] is reviewed['fixture_only']
+        assert record.get('approval') == reviewed.get('approval'), 'Approval report differs from reviewed input'
         relative = prefix+f'packages/{key[0]}/{key[0]}-{key[1]}.zip'
         assert record['path'] == relative
         blob = path(site, relative).read_bytes()
@@ -269,23 +285,18 @@ def audit(profile='fixture'):
     assert {p.name:digest(path(out/'release-assets', p.name).read_bytes())
             for p in (out/'release-assets').iterdir() if p.is_file()} == assets == plan['release_assets']
     assert (out/'SHA256SUMS').read_bytes() == ''.join(f'{value}  {name}\n' for name,value in sorted(assets.items())).encode()
-    blockers = []
-    if profile == 'candidate':
-        blockers = ['Private candidate profile cannot authorize publication']
-        for item in expected.values():
-            record = item.get('provenance')
-            if record is None: continue
-            blockers.extend(k for k in ['release_approved', 'rights_approved'] if not record[k])
-            for lane in item['lanes']:
-                acceptance = record['compatibility'][lane]
-                if not (acceptance['static_accepted'] and acceptance['runtime_accepted'] and acceptance['evidence']):
-                    blockers.append('Per-lane acceptance missing: '+lane)
-        assert plan['release_blockers'] == sorted(set(blockers))
+    blockers = ['Private candidate profile cannot authorize publication'] if profile == 'candidate' else []
+    approvals = []
+    for item in expected.values():
+        if 'approval' in item:
+            blockers.extend(item['approval']['release_blockers'])
+            approvals.append(item['approval'])
+    assert plan['release_blockers'] == sorted(set(blockers)), 'Approval blocker report mismatch'
     return {'status':'PASS', 'profile':profile, 'audit':'independent stdlib reviewed-input ZIP/XML/checksum inspection',
             'packages':receipts, 'catalogs':len(config['lanes']), 'site_files':len(actual),
             'production_addon_intake_empty':not json.loads((ROOT/'config/production.json').read_text())['packages'],
             'tastemade_or_aura_present':any(k[0] in ['plugin.video.tastemade', 'skin.aura'] for k in expected),
-            'release_blockers':sorted(set(blockers)), 'runtime_tested':False, 'public_https_verified':False}
+            'approvals': approvals, 'release_blockers':sorted(set(blockers)), 'runtime_tested':False, 'public_https_verified':False}
 
 
 if __name__ == '__main__':

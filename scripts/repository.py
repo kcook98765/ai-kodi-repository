@@ -2,6 +2,7 @@
 """Offline deterministic repository builder. No publication or source execution."""
 from __future__ import annotations
 import argparse
+import approval_contract
 import copy
 import hashlib
 import io
@@ -244,24 +245,22 @@ def production_packages(config, profile='production'):
                 'Independent package approval/hash evidence missing')
         require(all(type(record[k]) is bool for k in ('release_approved','rights_approved')),
                 'Malformed approval evidence')
-        require(profile == 'candidate' or (record['release_approved'] is True and record['rights_approved'] is True),
-                'Independent package approval/rights evidence missing')
         require(re.fullmatch('[0-9a-f]{40}', record['source_commit']) and record['source_repository'].startswith('https://github.com/'), 'Source provenance missing')
         require(len(set(item['lanes'])) == len(item['lanes']), 'Duplicate lane')
-        blockers = [k for k in ('release_approved','rights_approved') if not record[k]]
         for lane in item['lanes']:
             require(lane in config['lanes'], 'Unknown lane')
             acceptance = record['compatibility'][lane]
             require(all(type(acceptance[k]) is bool for k in ('static_accepted','runtime_accepted')) and
                     isinstance(acceptance['evidence'], list) and
                     all(isinstance(e, str) and e.strip() for e in acceptance['evidence']), 'Malformed lane evidence')
-            accepted = acceptance['static_accepted'] and acceptance['runtime_accepted'] and bool(acceptance['evidence'])
-            require(profile == 'candidate' or accepted, 'Per-lane acceptance evidence missing')
-            if not accepted:
-                blockers.append('Per-lane acceptance missing: '+lane)
+        approval = approval_contract.assess(record, item['lanes'])
+        approval['review_record_sha256'] = item['review_record_sha256']
+        approval['package_sha256'] = sha(blob)
+        blockers = approval['release_blockers']
+        require(profile == 'candidate' or not blockers, 'Independent package approval evidence missing: ' + '; '.join(blockers))
         inspect_zip(blob, record['runtime_files'])
         packages.append({'blob': blob, 'lanes': item['lanes'], 'fixture_only': False,
-                         'provenance': record, 'release_blockers': blockers})
+                         'provenance': record, 'approval': approval, 'release_blockers': blockers})
     current = {}
     for item in packages:
         manifest, _ = inspect_zip(item['blob'])
@@ -354,6 +353,8 @@ def build(profile):
         record = {'id': aid, 'version': ver, 'sha256': sha(item['blob']), 'bytes': len(item['blob']),
                   'path': prefix+relative, 'lanes': item['lanes'], 'fixture_only': item['fixture_only'],
                   'provenance': item['provenance']}
+        if 'approval' in item:
+            record['approval'] = item['approval']
         records.append(record)
         parsed.append((item,manifest,files))
     catalogs = {}
@@ -403,7 +404,8 @@ def build(profile):
             'input_config_sha256':sha((ROOT/('config/candidate.json' if profile=='candidate' else 'config/production.json')).read_bytes()),
             'retention_ledger_sha256':sha((ROOT/'releases/manifest.json').read_bytes()),
             'toolchain': {'python':sys.version.split()[0], 'zlib':zlib.ZLIB_RUNTIME_VERSION,
-                          'builder_sha256':sha(Path(__file__).read_bytes())},
+                          'builder_sha256':sha(Path(__file__).read_bytes()),
+                          'approval_contract_sha256':sha(Path(approval_contract.__file__).read_bytes())},
             'release_assets':release_assets, 'site_files':site_files,
             'site_manifest_sha256':sha(json_bytes(site_files)),
             'proposed_actions':['create approved GitHub repository (not authorized)',
@@ -413,9 +415,8 @@ def build(profile):
             'packages':records, 'catalogs':catalogs,
             'required_approvals':['source package review','compatibility and runtime evidence','rights','exact release hashes','GitHub creation','release and Pages deployment'],
             'remote_actions_executed':[], 'live_https_verified':False}
-    if profile == 'candidate':
-        plan['release_blockers'] = sorted({'Private candidate profile cannot authorize publication',
-            *(blocker for item in inputs for blocker in item.get('release_blockers', []))})
+    plan['release_blockers'] = sorted({blocker for item in inputs for blocker in item.get('release_blockers', [])}
+        | ({'Private candidate profile cannot authorize publication'} if profile == 'candidate' else set()))
     write_output(output/'release-plan.json', json_bytes(plan))
     sums = ''.join(f'{sha(p.read_bytes())}  {p.name}\n' for p in sorted((output/'release-assets').iterdir()) if p.is_file())
     write_output(output/'SHA256SUMS', sums.encode())
@@ -433,6 +434,7 @@ def verify(profile):
     require(plan['input_config_sha256'] == sha((ROOT/('config/candidate.json' if profile=='candidate' else 'config/production.json')).read_bytes()), 'Stale intake configuration')
     require(plan['retention_ledger_sha256'] == sha((ROOT/'releases/manifest.json').read_bytes()), 'Stale retention ledger')
     require(plan['toolchain']['builder_sha256'] == sha(Path(__file__).read_bytes()), 'Stale builder evidence')
+    require(plan['toolchain']['approval_contract_sha256'] == sha(Path(approval_contract.__file__).read_bytes()), 'Stale approval contract')
     actual_site = {p.relative_to(site).as_posix():sha(p.read_bytes()) for p in sorted(site.rglob('*')) if p.is_file()}
     require(actual_site == plan['site_files'] and sha(json_bytes(actual_site)) == plan['site_manifest_sha256'], 'Site contains missing/changed/unreviewed files')
     require({p.name:sha(p.read_bytes()) for p in sorted((output/'release-assets').iterdir()) if p.is_file()} == plan['release_assets'], 'Release asset set differs')

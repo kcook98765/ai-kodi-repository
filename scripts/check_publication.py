@@ -77,7 +77,8 @@ def site_audit(plan):
     for path in sorted(paths):
         scan_bytes(path,repo.safe_path(ROOT/'dist/production/site',path).read_bytes())
     return {'status':'PASS','site_files':len(paths),'only_repository_installer':len(plan['packages'])==1,
-            'reviewed_packages':len(independent['packages'])}
+            'reviewed_packages':len(independent['packages']),
+            'approvals':independent['approvals'], 'release_blockers':independent['release_blockers']}
 
 def public_https(plan):
     base = repo.load_config()['base_url']
