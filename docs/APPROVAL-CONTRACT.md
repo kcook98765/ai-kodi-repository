@@ -1,11 +1,11 @@
 # Review record contract
 
-The repository retains **strict admission**. Rights authorization, owner risk
+The repository retains **strict admission for legacy/v1 and v2**. Rights authorization, owner risk
 acknowledgment, technical release approval, observed runtime acceptance, final
 release approval and operator publication authority are separate assertions.
-There is no exception or waiver path. An acknowledgment cannot provide missing
+Schema 3 adds only the bounded distribution route described below. An acknowledgment cannot provide missing
 rights, resolve an adverse finding or complete a test. Deferred testing remains
-ineligible for production. This applies to every independently developed add-on.
+ineligible for production. These runtime and authorization boundaries apply to every independently developed add-on.
 
 The [JSON Schema](REVIEW-RECORD-SCHEMA.json) describes structural interchange;
 `scripts/approval_contract.py` additionally validates decision consistency, dates,
@@ -120,3 +120,121 @@ The generated current repository installer retains its existing infrastructure
 path; this clarification does not invent native acceptance for it or broaden
 that path to ordinary add-ons. Catalog selection and loopback downloads cannot
 prove a real Kodi GUI install/update or all-feature add-on behavior.
+
+## Version 3: independently developed unofficial integrations
+
+Opt in with exactly `schema_version=3` and
+`approval_policy="unofficial-integration-v1"`. Fully supported releases, including
+unofficial clients with supported service-use findings, continue to use strict
+v2. This route requires a nonempty list of residual **provider-service terms**
+findings. It supplies neither provider endorsement nor authorization to operate
+an integration. Approval records and publications still require separate review
+and operator authority; no existing record is automatically migrated or approved.
+
+Retain `rights_approved=false` and `rights_review={"status":"pending"}`. Broad
+rights are unverified. Do not reinterpret the old boolean as package-only rights.
+Retain the existing source/package/runtime hashes, `fixture_only=false`, selected
+lane scope, technical approval and completed per-lane static/runtime acceptance.
+The final boolean still equals `release_decision.status == approved` and cannot
+coexist with a hard blocker. Pending, deferred and failed required tests block.
+No required scope can be retrospectively removed to turn unknowns into passes.
+Empty lane lists require exact historical ledger membership, with acceptance
+still checked over the recorded compatibility scope; they admit no new release.
+
+Add one closed `unofficial_integration` object:
+
+| Member | Required assertion |
+| --- | --- |
+| `package_distribution_review` | Attributed `verified` action with `scope=all_distributed_materials`; other statuses are `pending`, `rejected`, `revoked` and block |
+| `service_use_review` | Attributed `terms_unresolved` action with `scope=runtime_service_content_and_marks`, exact provider-terms `risk_ids`, `provider_permission_obtained=false`, `provider_content_authorization=not_established`; `pending`, `blocked`, `revoked` block |
+| `owner_distribution_decision` | Attributed `accepted` action with `role=owner`, exact provider-terms `risk_ids`, `authorization_claimed=false`; `pending`, `declined`, `revoked` block |
+| `disclosure` | Exactly `package_path`, `package_sha256`, `release_text`; canonical relative notice path in the hashed runtime inventory, actual nonempty UTF-8 ZIP member, and nonblank reviewed public text |
+
+New actions use the existing `status`, `actor`, `role`, real UTC-second
+`recorded_at`, `rationale`, `evidence` fields plus exactly their listed fields.
+Pending is exactly `{"status":"pending"}`. New action and v3 risk evidence uses
+`relative/path sha256:<64 lowercase hex>` references to immutable retained files.
+The validator checks reference shape and record binding; **the operator verifies
+retained file digests, provenance, scope and substance**. Tools do not fetch or
+execute references. String attribution is not identity authentication.
+
+Package and service reviewers must be independent of the accepting owner; both
+reviewer actor names must differ from the accepting owner (ignoring surrounding
+space and case). Owner acknowledgment remains a separate existing action with
+`role=owner` naming **all** unresolved risks exactly. Acknowledgment alone has no
+eligibility effect. Each service/owner action names the exact nonempty provider
+terms set with no duplicates, omissions or additions. Decisions inherit the
+record's exact package, source, runtime inventory, policy and lane scope.
+
+### Nonwaivable review requirements
+
+Before recording `package_distribution_review=verified`, independently inspect
+**every** source file, third-party code, artwork, media, font, binary, notice and
+other ZIP member, plus exported repository artwork, metadata and promotional
+assets. Establish independent development, the licensing/ownership chain,
+redistribution conditions, attribution and an affirmative basis to distribute
+all those materials. An MIT label, public source, generic art or absence of video
+cannot replace that review. Missing attribution, unknown ownership, unauthorized
+redistributed assets, copied provider applications, leaked credentials and
+access-control circumvention block. Independently licensed third-party code
+retains its own applicable license/notice requirements.
+
+Assess actual accounts/entitlements, remote images/text, streaming, caching,
+downloads, SDKs, application-bundle parsing, identifiers, reverse engineering and
+sharing behavior. Review actual provider terms, including adverse clauses, and
+retain their precise evidence. A package-distribution assessment must address
+any restriction independently requiring authorization to **distribute the
+package or operate the integration**. When that authorization is applicable and
+unsupported, or distribution cannot be responsibly supported independently of
+risk acceptance, block release. Owner acceptance cannot override it. Separately
+licensed provider-material distribution uses the strict route with affirmative
+rights evidence. No DRM, region, payment or authentication bypass exception is
+created.
+
+Only residual uncertainty about provider-service terms/applicability or
+runtime-use restrictions may be classified `provider_terms`; an applicable
+unsatisfied authorization requirement cannot be relabeled that way. Every
+unresolved `rights`, `runtime`, `technical` or `other` risk remains a hard blocker.
+Machine validation cannot determine ownership, contractual applicability, legal
+substance or authenticate reviewers. A dishonest terms label supplies no rights
+and is an invalid review, even if its JSON shape passes. Retain adverse findings;
+never delete, mark resolved or hide them because the owner accepts distribution.
+
+### Disclosure, audit and compatibility
+
+The bundled notice must explain independent/unofficial status, no provider
+affiliation/endorsement and the actual project support route. Reviewed
+`release_text` must also identify unresolved terms and their official URL, lack
+of provider/content authorization, account/entitlement obligations and the
+limited effect of the owner decision. Human review verifies meaning, including
+non-affiliation and attribution; code verifies member/path/hash, nonempty text
+and faithful rendering. No keyword heuristic claims to make legal judgments.
+The builder escapes public notice text as text. The auditor independently
+reconstructs each complete public notice from hashed records, even when a forged
+plan updates site hashes. Private review evidence is never exported as a notice.
+
+Reports separately derive `package_distribution_eligible` (all gates other than
+the final release decision), `accepted_terms_risks` (full findings, still in
+`unresolved_risks`) and `release_blockers`. They preserve broad rights pending,
+provider/content authorization not established, the exact owner actions and
+runtime scope. The auditor repeats the v3 production conjunction independently
+and compares the complete report. Qualification/preflight propagate those same
+reports; private candidate profiles always remain publication-ineligible.
+Plans keep `publication_authorized=false`. Toolchain pins now include builder,
+contract, auditor, qualifier, preflight and interchange schema. Regenerate plans
+when any changes; old plans are deliberately stale.
+
+V1/v2 semantics and installer bytes are unchanged. New fields/categories reject
+in old record versions; removing/downgrading the version cannot silently admit a
+v3 record. Old consumers reject v3 (and its false broad-rights boolean). Upgrade
+all consumers together before considering any successor review record. Retain
+historical records immutably and cite supersession evidence; never change an old
+false field merely to pass. New terms, behavior/assets, complaints, revoked
+evidence or adverse distribution findings require renewed review. Withdrawal
+and publication remain separately authorized existing processes.
+
+The regression fixtures in `tests/test_unofficial_integration.py` illustrate a
+complete synthetic record and blocked alternatives. They are never live approval
+records, provider permission or native-runtime proof. Tastemade receives no
+special case and remains subject to its existing attribution, distribution,
+runtime-scope and final-approval gates.

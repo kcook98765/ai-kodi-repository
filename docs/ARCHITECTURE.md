@@ -48,10 +48,14 @@ Nexus lane; no Matrix/Omega/Piers Python stub qualification is claimed.
 Production manifests require reviewed per-lane static/runtime acceptance records,
 source commit and repository, redistribution rights and exact ZIP/runtime hashes.
 The versioned [approval contract](APPROVAL-CONTRACT.md) preserves that strict
-policy. Version 2 adds attributable rights, owner acknowledgment, technical and
+policy for legacy/v1 and v2. Version 2 adds attributable rights, owner acknowledgment, technical and
 final release decisions, explicit runtime deferrals and unresolved risk reports.
 Acknowledgment never supplies rights; deferred testing never supplies acceptance.
-Every unresolved v2 risk blocks production. Legacy records retain their original
+Every unresolved v2 risk blocks production. Explicit schema 3 adds only a
+reviewed independently developed unofficial-integration distribution route, with
+broad rights pending, retained accepted terms findings, separate service review
+and owner distribution decision, bound public disclosures and unchanged runtime
+and nonwaivable authorization gates. No current approvals are migrated. Legacy records retain their original
 boolean meaning and report their attribution/evidence limitations explicitly.
 The current numeric version comparator accepts only x.y.z and fails closed on
 Kodi suffixes/epochs. Extending it requires Kodi-equivalent comparison tests.

@@ -1,12 +1,14 @@
-"""Versioned approval evidence. No exceptions, publication or evidence invention.
+"""Versioned approval evidence. No publication or evidence invention.
 
 The builder and auditor use this contract against independently loaded, hashed
 inputs. Package, catalog, retention and production gates remain in each consumer.
 """
 from datetime import datetime
+from pathlib import PurePosixPath
 import re
 
 POLICY = 'strict-v1'
+UNOFFICIAL_POLICY = 'unofficial-integration-v1'
 DECISION_FIELDS = {'status', 'actor', 'role', 'recorded_at', 'rationale', 'evidence'}
 V2_FIELDS = {'approval_policy', 'approval_lanes', 'rights_review',
              'owner_acknowledgment', 'technical_release', 'release_decision',
@@ -44,21 +46,117 @@ def decision(value, statuses, inactive='pending', extra=()):
     require(references(value['evidence']), 'decision evidence missing')
 
 
+def canonical_path(value):
+    return (isinstance(value, str) and bool(PurePosixPath(value).parts) and
+            not PurePosixPath(value).is_absolute() and PurePosixPath(value).as_posix() == value and
+            '..' not in PurePosixPath(value).parts and
+            not any(c in value for c in ('\\', ':')) and
+            all(ord(c) >= 32 for c in value))
+
+
+def pinned_references(value):
+    if not references(value):
+        return False
+    for item in value:
+        match = re.fullmatch(r'(.+) sha256:([0-9a-f]{64})', item)
+        if not match or not canonical_path(match[1]):
+            return False
+    return True
+
+
+def exact_risks(value, ids):
+    return (isinstance(value, list) and bool(value) and
+            all(isinstance(item, str) for item in value) and
+            len(value) == len(set(value)) and set(value) == set(ids))
+
+
+def unofficial(record, risks, ack, blockers):
+    """Validate the closed v3 assertions; retain accepted findings as unresolved."""
+    require(record['rights_approved'] is False and record['rights_review'] == {'status': 'pending'},
+            'v3 broad rights must remain false/pending')
+    value = record.get('unofficial_integration')
+    require(isinstance(value, dict) and set(value) == {'package_distribution_review',
+            'service_use_review', 'owner_distribution_decision', 'disclosure'},
+            'malformed unofficial_integration')
+    package = value['package_distribution_review']
+    service = value['service_use_review']
+    owner = value['owner_distribution_decision']
+    ids = [r['id'] for r in risks if r['category'] == 'provider_terms']
+    for action, statuses, extras in [
+        (package, ('pending', 'verified', 'rejected', 'revoked'), ('scope',)),
+        (service, ('pending', 'terms_unresolved', 'blocked', 'revoked'),
+         ('scope', 'risk_ids', 'provider_permission_obtained', 'provider_content_authorization')),
+        (owner, ('pending', 'accepted', 'declined', 'revoked'), ('risk_ids', 'authorization_claimed'))]:
+        decision(action, statuses, extra=extras)
+        if action['status'] != 'pending':
+            require(set(action) == DECISION_FIELDS | set(extras), 'v3 action fields missing')
+            require(pinned_references(action['evidence']), 'v3 evidence must be hash-pinned')
+    if package['status'] != 'pending':
+        require(package['scope'] == 'all_distributed_materials', 'package distribution scope missing')
+    if service['status'] != 'pending':
+        require(service['scope'] == 'runtime_service_content_and_marks' and
+                service['provider_permission_obtained'] is False and
+                service['provider_content_authorization'] == 'not_established',
+                'v3 must not claim provider/content authorization')
+        require(exact_risks(service['risk_ids'], ids), 'service review risk scope mismatch')
+    if owner['status'] != 'pending':
+        require(owner['role'] == 'owner' and owner['authorization_claimed'] is False,
+                'owner distribution decision must not claim authorization')
+        require(exact_risks(owner['risk_ids'], ids), 'owner distribution risk scope mismatch')
+    notice = value['disclosure']
+    require(isinstance(notice, dict) and set(notice) == {'package_path', 'package_sha256', 'release_text'},
+            'malformed unofficial disclosure')
+    require(canonical_path(notice['package_path']) and
+            isinstance(notice['package_sha256'], str) and
+            re.fullmatch('[0-9a-f]{64}', notice['package_sha256']) is not None and
+            record['runtime_files'].get(notice['package_path']) == notice['package_sha256'],
+            'disclosure must bind a reviewed runtime member')
+    require(isinstance(notice['release_text'], str) and bool(notice['release_text'].strip()) and
+            all(ord(c) >= 32 or c in '\n\r\t' for c in notice['release_text']),
+            'release disclosure text missing or unsafe')
+    gates = [
+        (bool(ids) and len(ids) == len(risks), 'Only nonempty provider-terms findings are eligible'),
+        (package['status'] == 'verified', 'Package distribution review missing'),
+        (service['status'] == 'terms_unresolved', 'Service-use assessment missing or blocked'),
+        (ack['status'] == 'acknowledged', 'Owner acknowledgment missing'),
+        (owner['status'] == 'accepted', 'Owner distribution acceptance missing'),
+    ]
+    if owner['status'] == 'accepted':
+        for review in (package, service):
+            gates.append((review.get('actor', '').strip().casefold() != owner['actor'].strip().casefold(),
+                          'Distribution and service reviewers must be independent of accepting owner'))
+    blockers.extend(message for passed, message in gates if not passed)
+    accepted = all(passed for passed, _ in gates)
+    if not accepted:
+        blockers.extend('Unresolved risk: ' + item for item in ids)
+    return {'unofficial_integration': value,
+            'provider_permission_obtained': False, 'provider_content_authorization': 'not_established',
+            'accepted_terms_risks': [r for r in risks if r['category'] == 'provider_terms'] if accepted else [],
+            'publication_authorized': False}
+
+
 def assess(record, lanes):
-    """Validate additive v2 assertions and return an honest, JSON-safe report.
+    """Validate versioned assertions and return an honest, JSON-safe report.
 
     Unversioned and explicit v1 records keep the old boolean contract. New
     fields cannot be smuggled into v1 where an older consumer would ignore them.
     This does not authenticate actors or establish the substance of evidence.
     """
     version = record.get('schema_version', 1)
-    require(type(version) is int and version in (1, 2), 'unsupported schema_version')
+    require(type(version) is int and version in (1, 2, 3), 'unsupported schema_version')
+    require(version == 3 or 'unofficial_integration' not in record, 'v3 fields require schema_version=3')
     scope = {key: record[key] for key in ('package_sha256', 'source_repository', 'source_commit',
                                         'rights_approved', 'release_approved')}
     scope['lanes'] = list(lanes)
-    blockers = [key for key in ('rights_approved', 'release_approved') if not record[key]]
+    blockers = [key for key in ('rights_approved', 'release_approved')
+                if not record[key] and not (version == 3 and key == 'rights_approved')]
     runtime = {}
-    for lane in lanes:
+    # No active lanes is retained history only. Preserve acceptance over the
+    # recorded compatibility scope; both consumers separately require the ledger.
+    acceptance_lanes = lanes or (list(record['compatibility']) if version == 3 else [])
+    if version == 3 and not acceptance_lanes:
+        blockers.append('Original runtime acceptance scope missing')
+    for lane in acceptance_lanes:
         item = record['compatibility'][lane]
         if not (item['static_accepted'] and item['runtime_accepted'] and item['evidence']):
             blockers.append('Per-lane acceptance missing: ' + lane)
@@ -77,7 +175,8 @@ def assess(record, lanes):
                 'release_blockers': sorted(set(blockers))}
 
     require(V2_FIELDS <= set(record), 'v2 fields missing')
-    require(record['approval_policy'] == POLICY, 'unsupported approval_policy')
+    policy = UNOFFICIAL_POLICY if version == 3 else POLICY
+    require(record['approval_policy'] == policy, 'unsupported approval_policy')
     require(isinstance(record['approval_lanes'], list) and
             all(isinstance(lane, str) for lane in record['approval_lanes']) and
             len(record['approval_lanes']) == len(set(record['approval_lanes'])) and
@@ -100,10 +199,14 @@ def assess(record, lanes):
         require(isinstance(risk, dict) and set(risk) == {'id', 'category', 'description', 'evidence'},
                 'malformed unresolved risk')
         require(all(isinstance(risk[k], str) and risk[k].strip() for k in ('id', 'description'))
-                and risk['category'] in ('rights', 'runtime', 'technical', 'other')
+                and risk['category'] in (('rights', 'runtime', 'technical', 'other', 'provider_terms')
+                                         if version == 3 else ('rights', 'runtime', 'technical', 'other'))
                 and references(risk['evidence']), 'risk evidence missing')
+        if version == 3:
+            require(pinned_references(risk['evidence']), 'v3 risk evidence must be hash-pinned')
         ids.append(risk['id'])
-        blockers.append('Unresolved risk: ' + risk['id'])
+        if version != 3 or risk['category'] != 'provider_terms':
+            blockers.append('Unresolved risk: ' + risk['id'])
     require(len(ids) == len(set(ids)), 'duplicate risk id')
     ack = record['owner_acknowledgment']
     decision(ack, ('acknowledged', 'not_recorded'), inactive='not_recorded', extra=('risk_ids',))
@@ -139,16 +242,19 @@ def assess(record, lanes):
             require(not pending if passed else bool(pending), 'runtime result contradicts outstanding tests')
             if passed:
                 require(references(item['evidence']), 'completed runtime evidence missing')
-        if lane in lanes:
+        if lane in acceptance_lanes:
             runtime[lane] = test
             if not passed:
                 blockers.append('Runtime testing ' + test['status'] + ': ' + lane)
     require(not (risks and any(r['category'] == 'runtime' for r in risks) and
                  runtime and all(t['status'] == 'passed' for t in runtime.values())),
             'completed runtime contradicts unresolved runtime risks')
+    alternative = unofficial(record, risks, ack, blockers) if version == 3 else {}
+    if version == 3:
+        alternative['package_distribution_eligible'] = not any(b != 'release_approved' for b in blockers)
     require(not record['release_approved'] or not blockers,
             'final release approval contradicts outstanding gates')
-    return {**scope, 'schema_version': 2, 'approval_policy': POLICY, 'approval_lanes': record['approval_lanes'],
+    return {**scope, **alternative, 'schema_version': version, 'approval_policy': policy, 'approval_lanes': record['approval_lanes'],
             'release_status': record['release_decision']['status'],
             'rights_status': record['rights_review']['status'], 'rights_review': record['rights_review'],
             'technical_release_status': record['technical_release']['status'],

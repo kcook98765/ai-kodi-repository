@@ -8,6 +8,7 @@ import argparse
 import approval_contract
 import copy
 import hashlib
+from html import escape
 import io
 import json
 from pathlib import Path, PurePosixPath
@@ -140,19 +141,61 @@ def reviewed_inputs(config, profile):
         approval['package_sha256'] = digest(blob)
         # Independently enforce every strict production gate, even if a plan lies.
         if profile == 'production':
-            assert record['rights_approved'] and record['release_approved']
+            assert record['release_approved']
             assert not approval['release_blockers'], 'Outstanding approval gates'
             for lane in item['lanes']:
                 accepted = record['compatibility'][lane]
                 assert accepted['static_accepted'] and accepted['runtime_accepted'] and accepted['evidence']
-            if record.get('schema_version', 1) == 2:
+            if record.get('schema_version', 1) != 3:
+                assert record['rights_approved']
+            if record.get('schema_version', 1) in (2, 3):
                 assert record['technical_release']['status'] == 'approved'
-                assert record['rights_review']['status'] == 'verified'
                 assert record['release_decision']['status'] == 'approved'
+            if record.get('schema_version', 1) == 2:
+                assert record['rights_review']['status'] == 'verified'
                 assert not record['unresolved_risks']
                 assert all(record['compatibility'][lane]['runtime_test']['status'] == 'passed' for lane in item['lanes'])
+            if record.get('schema_version') == 3:
+                assert record['approval_policy'] == 'unofficial-integration-v1'
+                assert set(record['approval_lanes']) == set(item['lanes'])
+                assert record['rights_approved'] is False and record['rights_review'] == {'status': 'pending'}
+                risks = record['unresolved_risks']
+                ids = {r['id'] for r in risks}
+                assert risks and all(r['category'] == 'provider_terms' for r in risks)
+                value = record['unofficial_integration']
+                package = value['package_distribution_review']; service = value['service_use_review']
+                owner = value['owner_distribution_decision']; ack = record['owner_acknowledgment']
+                assert package['status'] == 'verified' and package['scope'] == 'all_distributed_materials'
+                assert service['status'] == 'terms_unresolved' and service['scope'] == 'runtime_service_content_and_marks'
+                assert service['provider_permission_obtained'] is False
+                assert service['provider_content_authorization'] == 'not_established'
+                assert owner['status'] == 'accepted' and owner['role'] == 'owner' and owner['authorization_claimed'] is False
+                assert ack['status'] == 'acknowledged' and ack['role'] == 'owner'
+                for action in (service, owner, ack):
+                    assert len(action['risk_ids']) == len(ids) and set(action['risk_ids']) == ids
+                assert all(review['actor'].strip().casefold() != owner['actor'].strip().casefold()
+                           for review in (package, service))
+                scope = item['lanes'] or list(record['compatibility'])
+                assert scope
+                for lane in scope:
+                    accepted = record['compatibility'][lane]; test = accepted['runtime_test']
+                    assert accepted['static_accepted'] and accepted['runtime_accepted'] and accepted['evidence']
+                    assert test['status'] == 'passed' and test['outstanding_tests'] == []
+                    assert all(test[k].strip() for k in ('actor', 'role', 'platform', 'kodi_version', 'scope', 'recorded_at', 'rationale'))
+                    assert test['evidence']
+                assert approval['package_distribution_eligible'] is True
+                assert approval['accepted_terms_risks'] == risks and approval['rights_status'] == 'pending'
         manifest, files = archive_files(blob)
         assert {n:digest(b) for n,b in files.items()} == record['runtime_files']
+        if record.get('schema_version') == 3:
+            notice = record['unofficial_integration']['disclosure']
+            path(ROOT/'incoming', notice['package_path'])
+            assert digest(files[notice['package_path']]) == notice['package_sha256']
+            assert files[notice['package_path']].decode('utf-8').strip()
+            if not item['lanes']:
+                assert any((old['id'], old['version'], old['sha256']) ==
+                           (manifest.get('id'), manifest.get('version'), digest(blob))
+                           for old in json.loads((ROOT/'releases/manifest.json').read_text())['packages'])
         key = (manifest.get('id'), manifest.get('version'))
         assert key not in expected
         expected[key] = {'blob': blob, 'files': files, 'lanes': item['lanes'],
@@ -199,6 +242,10 @@ def audit(profile='fixture'):
     assert plan['input_config_sha256'] == digest((ROOT/intake_path).read_bytes())
     assert plan['retention_ledger_sha256'] == digest((ROOT/'releases/manifest.json').read_bytes())
     assert plan['toolchain']['approval_contract_sha256'] == digest(Path(approval_contract.__file__).read_bytes())
+    for name,filename in [('builder', 'repository.py'), ('auditor', 'audit_candidate.py'),
+                          ('qualifier', 'qualify.py'), ('preflight', 'check_publication.py')]:
+        assert plan['toolchain'][name+'_sha256'] == digest((Path(__file__).parent/filename).read_bytes())
+    assert plan['toolchain']['review_schema_sha256'] == digest((Path(__file__).parents[1]/'docs/REVIEW-RECORD-SCHEMA.json').read_bytes())
     expected = reviewed_inputs(config, profile)
     installer_version = config['fixture_version'] if profile == 'fixture' else config['version']
     installer_source = ROOT/'packages'/config['addon_id']
@@ -278,6 +325,41 @@ def audit(profile='fixture'):
                 assert path(site, relative_asset).read_bytes() == files[asset.text]
                 expected_site.add(relative_asset)
         expected_site.update([relative, relative+'.sha256'])
+    # Reconstruct the whole page from reviewed inputs. Substring matching alone
+    # would accept notices hidden in comments, styles or hidden ancestors.
+    page = path(site, 'index.html').read_bytes().decode('utf-8')
+    links = ''.join(f'<li><a href="{prefix}packages/{aid}/{aid}-{ver}.zip">{aid} {ver}</a></li>'
+                    for aid,ver in expected)
+    notices = []
+    for key,item in expected.items():
+        record = item.get('provenance', {})
+        if record.get('schema_version') == 3:
+            notices.append('<section data-unofficial-package="'+key[0]+'-'+key[1]+'"><h2>'
+                           +key[0]+' '+key[1]+'</h2><pre>'
+                           +escape(record['unofficial_integration']['disclosure']['release_text'])
+                           +'</pre></section>')
+    if profile == 'fixture':
+        expected_page = ('<!doctype html><title>AI Kodi repository: local draft</title>'
+                         '<p>Not published. Fixture artifacts must never be deployed.</p><ul>'+links+'</ul>\n')
+    elif profile == 'candidate':
+        expected_page = ('<!doctype html><title>Private Kodi candidate</title>'
+                         '<p>Not approved for release. Native acceptance and rights must be resolved.</p><ul>'+links+'</ul>\n')
+    else:
+        availability = ('Native Kodi acceptance is pending. Only the repository installer is currently available.</p>'
+                        '<p>Tastemade and Aura are not published.' if len(expected) == 1 else
+                        'Available packages are listed below. Compatibility and acceptance are package-specific.')
+        expected_page = ('<!doctype html><html lang="en"><meta charset="utf-8">'
+                         '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                         '<title>AI Kodi Repository</title><h1>AI Kodi Repository</h1>'
+                         '<p>Version-aware Kodi repository infrastructure. '+availability+'</p><ul>'+links+'</ul>'
+                         '<p>Each ZIP has a SHA-256 sidecar at the same URL plus .sha256.</p>'
+                         '<p><a href="https://github.com/'+config['github_repository']+'">'
+                         'Source, architecture and release procedures</a></p></html>\n')
+    if notices:
+        rendered = ''.join(notices)
+        expected_page = (expected_page.replace('</html>', rendered+'</html>')
+                         if '</html>' in expected_page else expected_page+rendered)
+    assert page == expected_page, 'Public disclosure/index differs from reviewed input'
     actual = {p.relative_to(site).as_posix():digest(path(site, p.relative_to(site).as_posix()).read_bytes())
               for p in site.rglob('*') if p.is_file()}
     assert set(actual) == expected_site, 'Unreviewed or missing public site files'
