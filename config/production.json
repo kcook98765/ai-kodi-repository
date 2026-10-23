@@ -1,6 +1,15 @@
 {
-  "schema": 1,
-  "packages": [],
   "external_dependencies": {},
-  "note": "Empty deliberately. Tastemade and Aura have no approved distribution inputs."
+  "packages": [
+    {
+      "lanes": [
+        "omega"
+      ],
+      "review_record": "tastemade-review-v3-approved-r10.json",
+      "review_record_sha256": "442db92cb401bf981de89eeebac9be54492a81d97fa57abcf2bb69f4a33df05f",
+      "sha256": "d21af0f89c118c2a4c789b656b27d6211a086cce961dc3501fa4ad00564fce87",
+      "zip": "plugin.video.tastemade-0.1.0.zip"
+    }
+  ],
+  "schema": 1
 }

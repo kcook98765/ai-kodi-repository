@@ -1,1 +1,15 @@
-{"schema": 1, "packages": []}
+{
+  "packages": [
+    {
+      "id": "repository.ai.kodi",
+      "sha256": "f4ec0c67329e70516baa824606f9133ff95516bea0cfcee6370fa2ac7a0afdad",
+      "version": "0.1.0"
+    },
+    {
+      "id": "plugin.video.tastemade",
+      "sha256": "d21af0f89c118c2a4c789b656b27d6211a086cce961dc3501fa4ad00564fce87",
+      "version": "0.1.0"
+    }
+  ],
+  "schema": 1
+}
