@@ -3,7 +3,7 @@
 The builder and auditor use this contract against independently loaded, hashed
 inputs. Package, catalog, retention and production gates remain in each consumer.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import PurePosixPath
 import re
 
@@ -70,7 +70,50 @@ def exact_risks(value, ids):
             len(value) == len(set(value)) and set(value) == set(ids))
 
 
-def unofficial(record, risks, ack, blockers):
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+def provider_exception(record, owner, service, package_identity, blockers):
+    """Owner policy acceptance supplies no provider permission or package rights."""
+    value = owner.get('provider_authorization_exception')
+    if value is None:
+        require('provider_authorization_exception' not in owner, 'malformed provider exception')
+        return False
+    require(isinstance(value, dict) and set(value) == {
+        'scope', 'upstream_provider', 'addon_id', 'addon_version', 'package_sha256',
+        'provider_authorization_verified', 'provider_terms_concern', 'owner_accepts_risk', 'expires_at'},
+        'malformed provider exception')
+    require(value['scope'] == 'repository_provider_authorization_gate_only' and
+            value['provider_authorization_verified'] is False and value['owner_accepts_risk'] is True,
+            'provider exception must record unverified authorization and owner risk acceptance only')
+    require(all(isinstance(value[k], str) and value[k].strip() and value[k] == value[k].strip()
+                for k in ('upstream_provider', 'provider_terms_concern', 'addon_id', 'addon_version')),
+            'provider exception identity/terms concern missing')
+    require(package_identity is not None and
+            (value['addon_id'], value['addon_version']) == package_identity and
+            value['package_sha256'] == record['package_sha256'],
+            'provider exception artifact identity/checksum mismatch')
+    require(service['status'] == 'authorization_unverified' and
+            service.get('upstream_provider') == value['upstream_provider'],
+            'provider exception service/provider mismatch')
+    stamp = value['expires_at']
+    require(isinstance(stamp, str) and re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', stamp),
+            'provider exception expiry must be UTC RFC3339 seconds')
+    try:
+        expiry = datetime.strptime(stamp, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+        recorded = datetime.strptime(owner['recorded_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise ValueError('Approval contract: invalid provider exception date') from None
+    require(expiry > recorded, 'provider exception expiry must follow owner decision')
+    now = utc_now()
+    active = owner['status'] == 'accepted' and recorded <= now < expiry
+    if not active:
+        blockers.append('Owner provider-authorization exception inactive, future-dated or expired')
+    return active
+
+
+def unofficial(record, risks, ack, blockers, package_identity):
     """Validate the closed v3 assertions; retain accepted findings as unresolved."""
     require(record['rights_approved'] is False and record['rights_review'] == {'status': 'pending'},
             'v3 broad rights must remain false/pending')
@@ -81,12 +124,15 @@ def unofficial(record, risks, ack, blockers):
     package = value['package_distribution_review']
     service = value['service_use_review']
     owner = value['owner_distribution_decision']
+    require(all(isinstance(action, dict) for action in (package, service, owner)), 'malformed v3 action')
     ids = [r['id'] for r in risks if r['category'] == 'provider_terms']
     for action, statuses, extras in [
         (package, ('pending', 'verified', 'rejected', 'revoked'), ('scope',)),
-        (service, ('pending', 'terms_unresolved', 'blocked', 'revoked'),
-         ('scope', 'risk_ids', 'provider_permission_obtained', 'provider_content_authorization')),
-        (owner, ('pending', 'accepted', 'declined', 'revoked'), ('risk_ids', 'authorization_claimed'))]:
+        (service, ('pending', 'terms_unresolved', 'authorization_unverified', 'blocked', 'revoked'),
+         ('scope', 'risk_ids', 'provider_permission_obtained', 'provider_content_authorization') +
+         (('upstream_provider',) if service.get('status') == 'authorization_unverified' else ())),
+        (owner, ('pending', 'accepted', 'declined', 'revoked'), ('risk_ids', 'authorization_claimed') +
+         (('provider_authorization_exception',) if 'provider_authorization_exception' in owner else ()))]:
         decision(action, statuses, extra=extras)
         if action['status'] != 'pending':
             require(set(action) == DECISION_FIELDS | set(extras), 'v3 action fields missing')
@@ -103,6 +149,15 @@ def unofficial(record, risks, ack, blockers):
         require(owner['role'] == 'owner' and owner['authorization_claimed'] is False,
                 'owner distribution decision must not claim authorization')
         require(exact_risks(owner['risk_ids'], ids), 'owner distribution risk scope mismatch')
+    exception_active = provider_exception(record, owner, service, package_identity, blockers)
+    if 'provider_authorization_exception' in owner and ack['status'] == 'acknowledged':
+        require(ack['actor'].strip().casefold() == owner['actor'].strip().casefold(),
+                'owner-risk decision contradicts acknowledging owner identity')
+    if service['status'] == 'authorization_unverified':
+        require(isinstance(service['upstream_provider'], str) and bool(service['upstream_provider'].strip()),
+                'upstream provider missing')
+        if not exception_active:
+            blockers.append('Provider authorization unverified; active owner-risk decision required')
     notice = value['disclosure']
     require(isinstance(notice, dict) and set(notice) == {'package_path', 'package_sha256', 'release_text'},
             'malformed unofficial disclosure')
@@ -117,7 +172,7 @@ def unofficial(record, risks, ack, blockers):
     gates = [
         (bool(ids) and len(ids) == len(risks), 'Only nonempty provider-terms findings are eligible'),
         (package['status'] == 'verified', 'Package distribution review missing'),
-        (service['status'] == 'terms_unresolved', 'Service-use assessment missing or blocked'),
+        (service['status'] == 'terms_unresolved' or exception_active, 'Service-use assessment missing or blocked'),
         (ack['status'] == 'acknowledged', 'Owner acknowledgment missing'),
         (owner['status'] == 'accepted', 'Owner distribution acceptance missing'),
     ]
@@ -130,12 +185,13 @@ def unofficial(record, risks, ack, blockers):
     if not accepted:
         blockers.extend('Unresolved risk: ' + item for item in ids)
     return {'unofficial_integration': value,
+            'provider_authorization_exception_active': exception_active,
             'provider_permission_obtained': False, 'provider_content_authorization': 'not_established',
             'accepted_terms_risks': [r for r in risks if r['category'] == 'provider_terms'] if accepted else [],
             'publication_authorized': False}
 
 
-def assess(record, lanes):
+def assess(record, lanes, package_identity=None):
     """Validate versioned assertions and return an honest, JSON-safe report.
 
     Unversioned and explicit v1 records keep the old boolean contract. New
@@ -249,7 +305,7 @@ def assess(record, lanes):
     require(not (risks and any(r['category'] == 'runtime' for r in risks) and
                  runtime and all(t['status'] == 'passed' for t in runtime.values())),
             'completed runtime contradicts unresolved runtime risks')
-    alternative = unofficial(record, risks, ack, blockers) if version == 3 else {}
+    alternative = unofficial(record, risks, ack, blockers, package_identity) if version == 3 else {}
     if version == 3:
         alternative['package_distribution_eligible'] = not any(b != 'release_approved' for b in blockers)
     require(not record['release_approved'] or not blockers,

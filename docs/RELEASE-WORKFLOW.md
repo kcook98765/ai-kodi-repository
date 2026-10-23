@@ -100,15 +100,22 @@ the independent audit. Numeric x.y.z versions, file-based library declarations
 and the existing external dependency-snapshot restriction remain unchanged.
 
 Schema 3 / `unofficial-integration-v1` is an opt-in alternative only for an
-independently developed package with supported distribution rights and residual
-provider-service terms uncertainty. Follow the complete v3 contract: independently
+independently developed package with supported package-distribution rights and
+documented provider-service terms concerns. Follow the complete v3 contract: independently
 review all distributed content/attribution and any applicable distribution or
 operation authorization requirement; record separate service findings, owner
 acknowledgment and owner distribution decision; bind bundled and release-facing
 non-affiliation disclosures. Broad rights stay false/pending. Owner acceptance
 supplies no provider authorization and cannot clear missing rights, attribution,
-required tests, security/provenance issues or an independent authorization
-restriction. Record accepted terms findings as unresolved in every report.
+required tests or security/provenance issues. Only the contract's explicit
+`provider_authorization_exception` may replace this repository's provider-authorization
+gate: require an attributable owner acceptance, matching provider, inspected add-on
+ID/version, frozen ZIP checksum, known terms concern and current expiry. Record
+provider authorization as unverified and retain accepted findings as unresolved
+in every plan and independent audit. This supplies no legal clearance. User-reported
+runtime results retain their evidence and scope; required unknown/deferred tests
+still block final release. Do not seek provider permission as an implicit prerequisite
+of this owner-risk route.
 
 Use a newly reviewed successor record and new intake digest only under separate
 release authority. Upgrade builder/auditor/qualifier/preflight together and

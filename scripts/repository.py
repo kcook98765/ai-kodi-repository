@@ -254,12 +254,13 @@ def production_packages(config, profile='production'):
             require(all(type(acceptance[k]) is bool for k in ('static_accepted','runtime_accepted')) and
                     isinstance(acceptance['evidence'], list) and
                     all(isinstance(e, str) and e.strip() for e in acceptance['evidence']), 'Malformed lane evidence')
-        approval = approval_contract.assess(record, item['lanes'])
+        manifest, files = inspect_zip(blob, record['runtime_files'])
+        approval = approval_contract.assess(record, item['lanes'],
+            package_identity=(manifest.get('id'), manifest.get('version')))
         approval['review_record_sha256'] = item['review_record_sha256']
         approval['package_sha256'] = sha(blob)
         blockers = approval['release_blockers']
         require(profile == 'candidate' or not blockers, 'Independent package approval evidence missing: ' + '; '.join(blockers))
-        manifest, files = inspect_zip(blob, record['runtime_files'])
         if record.get('schema_version') == 3:
             disclosure = record['unofficial_integration']['disclosure']
             safe_path(ROOT/'incoming', disclosure['package_path'], exists=False)
