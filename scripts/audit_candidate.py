@@ -110,6 +110,98 @@ def archive_files(blob):
     return manifest, files
 
 
+def initial_runtime_gate(record, lanes, manifest, history):
+    """Independent production predicates, even if shared assessment is permissive."""
+    value = record['runtime_acceptance_exception']
+    assert set(value) == {'scope', 'addon_id', 'addon_version', 'package_sha256', 'source_commit',
+                          'lanes', 'expires_at', 'scenarios', 'owner_decision', 'independent_verification'}
+    identity = (manifest.get('id'), manifest.get('version'))
+    assert value['scope'] == 'initial_release_runtime_coverage_only'
+    assert (value['addon_id'], value['addon_version'], value['package_sha256'], value['source_commit']) == (
+        *identity, record['package_sha256'], record['source_commit'])
+    assert lanes and len(value['lanes']) == len(set(value['lanes'])) and set(value['lanes']) == set(lanes)
+    prior = [old for old in history if old['id'] == identity[0]]
+    assert not prior or (prior[0]['version'], prior[0]['sha256']) == (identity[1], record['package_sha256'])
+    scenarios = value['scenarios']; assert isinstance(scenarios, list) and scenarios
+    ids = []; runtime_ids = set()
+    for s in scenarios:
+        assert set(s) == {'id', 'lane', 'risk_id', 'kind', 'observation', 'description', 'supporting_evidence'}
+        assert all(isinstance(s[k], str) and s[k].strip() for k in ('id', 'risk_id', 'description'))
+        assert s['lane'] in lanes
+        assert (s['kind'], s['observation']) in (('unobserved_functionality', 'not_observed'),
+                                               ('environment_limitation', 'unavailable'))
+        assert isinstance(s['supporting_evidence'], list) and s['supporting_evidence']
+        for e in s['supporting_evidence']:
+            assert set(e) == {'method', 'status', 'scope', 'evidence'}
+            assert e['method'] in ('offline', 'native', 'environment')
+            assert e['status'] in ('passed', 'not_observed', 'unavailable')
+            assert isinstance(e['scope'], str) and e['scope'].strip()
+            assert audit_pinned_evidence(e['evidence'])
+        if s['kind'] == 'environment_limitation':
+            assert any(e['method'] == 'environment' and e['status'] == 'unavailable' for e in s['supporting_evidence'])
+        ids.append(s['id']); runtime_ids.add(s['risk_id'])
+    assert len(ids) == len(set(ids))
+    assert runtime_ids and runtime_ids == {r['id'] for r in record['unresolved_risks'] if r['category'] == 'runtime'}
+    for lane in lanes:
+        item = record['compatibility'][lane]; test = item['runtime_test']
+        assert item['static_accepted'] is True and item['evidence'] and audit_pinned_evidence(test['evidence'])
+        expected = [s['id'] for s in scenarios if s['lane'] == lane]
+        assert all(test[k].strip() for k in ('actor', 'role', 'platform', 'kodi_version', 'scope', 'recorded_at', 'rationale'))
+        assert isinstance(test['outstanding_tests'], list)
+        if expected:
+            assert item['runtime_accepted'] is False and test['status'] == 'deferred'
+            assert len(test['outstanding_tests']) == len(set(test['outstanding_tests']))
+            assert set(test['outstanding_tests']) == set(expected)
+        else:
+            assert item['runtime_accepted'] is True and test['status'] == 'passed' and test['outstanding_tests'] == []
+    owner = value['owner_decision']; review = value['independent_verification']; ack = record['owner_acknowledgment']
+    assert owner['status'] == 'accepted' and owner['role'] == 'owner' and review['status'] == 'verified'
+    assert review['no_known_security_defects'] is True
+    assert ack['status'] == 'acknowledged' and ack['role'] == 'owner'
+    assert owner['actor'].strip().casefold() == ack['actor'].strip().casefold()
+    assert owner['actor'].strip().casefold() == record['unofficial_integration']['owner_distribution_decision']['actor'].strip().casefold()
+    assert review['actor'].strip().casefold() != owner['actor'].strip().casefold()
+    core = review['core_evidence']; assert isinstance(core, list) and core
+    for e in core:
+        assert set(e) == {'method', 'status', 'scope', 'evidence'}
+        assert e['method'] in ('native', 'offline') and e['status'] == 'passed'
+        assert isinstance(e['scope'], str) and e['scope'].strip() and audit_pinned_evidence(e['evidence'])
+    assert {e['method'] for e in core} == {'native', 'offline'}
+    assert re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', value['expires_at'])
+    expiry = datetime.strptime(value['expires_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+    for action, extras in ((owner, {'scenario_ids', 'risk_ids'}),
+                           (review, {'scenario_ids', 'risk_ids', 'no_known_security_defects', 'core_evidence'})):
+        assert set(action) == {'status', 'actor', 'role', 'recorded_at', 'rationale', 'evidence'} | extras
+        assert all(isinstance(action[k], str) and action[k].strip() for k in ('actor', 'role', 'rationale'))
+        assert audit_pinned_evidence(action['evidence'])
+        for field, expected in (('scenario_ids', set(ids)), ('risk_ids', runtime_ids)):
+            assert len(action[field]) == len(set(action[field])) and set(action[field]) == expected
+        assert re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', action['recorded_at'])
+        assert datetime.strptime(action['recorded_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc) < expiry
+    final = record['release_decision']
+    assert final['role'] == 'owner' and final['actor'].strip().casefold() == owner['actor'].strip().casefold()
+    assert final['runtime_exception_sha256'] == digest(json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode('utf-8'))
+    assert audit_pinned_evidence(final['evidence'])
+    assert re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', final['recorded_at'])
+    assert all(a['recorded_at'] <= final['recorded_at'] for a in (owner, review))
+    assert datetime.strptime(final['recorded_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc)
+
+
+def audit_pinned_evidence(value):
+    if not isinstance(value, list) or not value:
+        return False
+    for ref in value:
+        match = re.fullmatch(r'(.+) sha256:([0-9a-f]{64})', ref) if isinstance(ref, str) else None
+        if not match:
+            return False
+        name = match[1]
+        if (not PurePosixPath(name).parts or PurePosixPath(name).is_absolute() or PurePosixPath(name).as_posix() != name or
+                '..' in PurePosixPath(name).parts or any(c in name for c in ('\\', ':')) or
+                any(ord(c) < 32 for c in name)):
+            return False
+    return True
+
+
 def reviewed_inputs(config, profile):
     expected = {}
     if profile == 'fixture':
@@ -139,17 +231,20 @@ def reviewed_inputs(config, profile):
             assert all(isinstance(e, str) and e.strip() for e in acceptance['evidence'])
         manifest, files = archive_files(blob)
         assert {n:digest(b) for n,b in files.items()} == record['runtime_files']
+        history = json.loads((ROOT/'releases/manifest.json').read_text())['packages']
         approval = approval_contract.assess(record, item['lanes'],
-            package_identity=(manifest.get('id'), manifest.get('version')))
+            package_identity=(manifest.get('id'), manifest.get('version')), release_history=history)
         approval['review_record_sha256'] = digest(raw)
         approval['package_sha256'] = digest(blob)
         # Independently enforce every strict production gate, even if a plan lies.
         if profile == 'production':
+            initial_policy = record.get('schema_version') == 3 and record.get('approval_policy') == 'unofficial-integration-initial-release-v1'
+            assert initial_policy or 'runtime_acceptance_exception' not in record
             assert record['release_approved']
             assert not approval['release_blockers'], 'Outstanding approval gates'
             for lane in item['lanes']:
                 accepted = record['compatibility'][lane]
-                assert accepted['static_accepted'] and accepted['runtime_accepted'] and accepted['evidence']
+                assert accepted['static_accepted'] and (accepted['runtime_accepted'] or initial_policy) and accepted['evidence']
             if record.get('schema_version', 1) != 3:
                 assert record['rights_approved']
             if record.get('schema_version', 1) in (2, 3):
@@ -160,12 +255,12 @@ def reviewed_inputs(config, profile):
                 assert not record['unresolved_risks']
                 assert all(record['compatibility'][lane]['runtime_test']['status'] == 'passed' for lane in item['lanes'])
             if record.get('schema_version') == 3:
-                assert record['approval_policy'] == 'unofficial-integration-v1'
+                assert record['approval_policy'] in ('unofficial-integration-v1', 'unofficial-integration-initial-release-v1')
                 assert set(record['approval_lanes']) == set(item['lanes'])
                 assert record['rights_approved'] is False and record['rights_review'] == {'status': 'pending'}
                 risks = record['unresolved_risks']
-                ids = {r['id'] for r in risks}
-                assert risks and all(r['category'] == 'provider_terms' for r in risks)
+                ids = {r['id'] for r in risks if r['category'] == 'provider_terms'}
+                assert ids and all(r['category'] == 'provider_terms' or (initial_policy and r['category'] == 'runtime') for r in risks)
                 value = record['unofficial_integration']
                 package = value['package_distribution_review']; service = value['service_use_review']
                 owner = value['owner_distribution_decision']; ack = record['owner_acknowledgment']
@@ -198,20 +293,26 @@ def reviewed_inputs(config, profile):
                 assert service['provider_content_authorization'] == 'not_established'
                 assert owner['status'] == 'accepted' and owner['role'] == 'owner' and owner['authorization_claimed'] is False
                 assert ack['status'] == 'acknowledged' and ack['role'] == 'owner'
-                for action in (service, owner, ack):
+                for action in (service, owner):
                     assert len(action['risk_ids']) == len(ids) and set(action['risk_ids']) == ids
+                assert len(ack['risk_ids']) == len(risks) and set(ack['risk_ids']) == {r['id'] for r in risks}
                 assert all(review['actor'].strip().casefold() != owner['actor'].strip().casefold()
                            for review in (package, service))
                 scope = item['lanes'] or list(record['compatibility'])
                 assert scope
-                for lane in scope:
+                if initial_policy:
+                    initial_runtime_gate(record, scope, manifest, history)
+                    assert approval['runtime_exception_active'] is True
+                    assert approval['runtime_admission'] == 'owner_accepted_runtime_limitations'
+                    assert approval['runtime_acceptance_exception'] == record['runtime_acceptance_exception']
+                for lane in ([] if initial_policy else scope):
                     accepted = record['compatibility'][lane]; test = accepted['runtime_test']
                     assert accepted['static_accepted'] and accepted['runtime_accepted'] and accepted['evidence']
                     assert test['status'] == 'passed' and test['outstanding_tests'] == []
                     assert all(test[k].strip() for k in ('actor', 'role', 'platform', 'kodi_version', 'scope', 'recorded_at', 'rationale'))
                     assert test['evidence']
                 assert approval['package_distribution_eligible'] is True
-                assert approval['accepted_terms_risks'] == risks and approval['rights_status'] == 'pending'
+                assert approval['accepted_terms_risks'] == [r for r in risks if r['category'] == 'provider_terms'] and approval['rights_status'] == 'pending'
         if record.get('schema_version') == 3:
             notice = record['unofficial_integration']['disclosure']
             path(ROOT/'incoming', notice['package_path'])
@@ -359,9 +460,23 @@ def audit(profile='fixture'):
     for key,item in expected.items():
         record = item.get('provenance', {})
         if record.get('schema_version') == 3:
+            runtime_text = ''
+            if 'runtime_acceptance_exception' in record:
+                value = record['runtime_acceptance_exception']
+                public = []
+                for s in value['scenarios']:
+                    public.append({'id': s['id'], 'lane': s['lane'], 'kind': s['kind'],
+                                   'observation': s['observation'], 'description': s['description'],
+                                   'supporting_evidence': [{'method': e['method'], 'status': e['status'], 'scope': e['scope']}
+                                                           for e in s['supporting_evidence']]})
+                runtime_text = escape('\nRuntime coverage limitations (not passed):\n' +
+                    json.dumps(public, sort_keys=True, ensure_ascii=True) +
+                    '\nRuntime owner decision: ' + value['owner_decision']['status'] +
+                    '; exception expires: ' + value['expires_at'])
             notices.append('<section data-unofficial-package="'+key[0]+'-'+key[1]+'"><h2>'
                            +key[0]+' '+key[1]+'</h2><pre>'
                            +escape(record['unofficial_integration']['disclosure']['release_text'])
+                           +runtime_text
                            +'</pre></section>')
     if profile == 'fixture':
         expected_page = ('<!doctype html><title>AI Kodi repository: local draft</title>'

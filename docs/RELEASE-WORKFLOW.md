@@ -122,3 +122,16 @@ release authority. Upgrade builder/auditor/qualifier/preflight together and
 regenerate the complete toolchain/schema-pinned plan. Check complete rendered
 notice bytes and retained evidence digests/substance before final approval.
 Candidate-profile qualification remains private and cannot authorize publication.
+
+The separate schema 3 `unofficial-integration-initial-release-v1` policy may admit
+named initial-release runtime coverage limitations. Retain unobserved/environment
+observations, scoped supplemental evidence, false runtime acceptance and deferred
+outstanding scenario IDs. Require exact artifact/source/lane binding, checked
+first-release history, expiring owner acceptance, independent core native/offline
+verification with no known security defect, all-risk acknowledgment, and a
+separate final owner decision binding the complete exception digest. Rights,
+archive/provenance, security, provider-risk, audit and publication controls remain
+intact. Never fabricate owner decisions or convert failed/unknown tests to PASS
+for a dry run. Truthful pending real records use private candidate qualification;
+positive synthetic fixtures exercise eligible production admission without
+supplying any actual release approval.

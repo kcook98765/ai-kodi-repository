@@ -60,6 +60,14 @@ decision may replace only the repository's provider-authorization gate, binding
 provider, inspected add-on ID/version and frozen ZIP hash while reporting
 authorization unverified. It supplies no legal clearance. No current approvals are migrated. Legacy records retain their original
 boolean meaning and report their attribution/evidence limitations explicitly.
+The separate schema 3 `unofficial-integration-initial-release-v1` route admits
+only named, expiring, owner-accepted initial-release coverage limitations after
+independent verification. Runtime acceptance stays false/deferred. Both consumers
+check artifact/source/lane scope, first-release history, individual observations,
+independent verification, provider safeguards and separate final owner approval.
+Plans/audits and independently reconstructed public notices preserve limitations
+and scoped supplemental outcomes. Failed tests, security defects and substantive
+rights defects remain ineligible. The original schema 3 route remains unchanged.
 The current numeric version comparator accepts only x.y.z and fails closed on
 Kodi suffixes/epochs. Extending it requires Kodi-equivalent comparison tests.
 Required dependencies resolve within that lane plus explicit built-in API floors.
