@@ -230,6 +230,21 @@ def fixture_packages():
                 'validation_sha256': sha(validation_path.read_bytes())}})
     return result
 
+def runtime_notice(approval):
+    value = approval.get('runtime_acceptance_exception')
+    if value is None:
+        return ''
+    # Publish classifications and supplemental outcomes, never private evidence paths.
+    public = [{'id': s['id'], 'lane': s['lane'], 'kind': s['kind'],
+               'observation': s['observation'], 'description': s['description'],
+               'supporting_evidence': [{k: e[k] for k in ('method', 'status', 'scope')}
+                                       for e in s['supporting_evidence']]} for s in value['scenarios']]
+    return escape('\nRuntime coverage limitations (not passed):\n' +
+                  json.dumps(public, sort_keys=True, ensure_ascii=True) +
+                  '\nRuntime owner decision: ' + value['owner_decision']['status'] +
+                  '; exception expires: ' + value['expires_at'])
+
+
 def production_packages(config, profile='production'):
     require(profile in ('production', 'candidate'), 'Invalid intake profile')
     inputs = json.loads((ROOT/f'config/{profile}.json').read_text())
@@ -256,7 +271,7 @@ def production_packages(config, profile='production'):
                     all(isinstance(e, str) and e.strip() for e in acceptance['evidence']), 'Malformed lane evidence')
         manifest, files = inspect_zip(blob, record['runtime_files'])
         approval = approval_contract.assess(record, item['lanes'],
-            package_identity=(manifest.get('id'), manifest.get('version')))
+            package_identity=(manifest.get('id'), manifest.get('version')), release_history=ledger['packages'])
         approval['review_record_sha256'] = item['review_record_sha256']
         approval['package_sha256'] = sha(blob)
         blockers = approval['release_blockers']
@@ -389,6 +404,7 @@ def build(profile):
     notices = ''.join('<section data-unofficial-package="'+r['id']+'-'+r['version']+'"><h2>'
                       +r['id']+' '+r['version']+'</h2><pre>'
                       +escape(r['approval']['unofficial_integration']['disclosure']['release_text'])
+                      +runtime_notice(r.get('approval', {}))
                       +'</pre></section>' for r in records
                       if r.get('approval', {}).get('schema_version') == 3)
     if profile == 'fixture':

@@ -54,6 +54,8 @@ def source_audit():
             'scope':'Selected Git source files; pattern scan is not a proof of secret absence'}
 
 def site_audit(plan):
+    # Reassess real inputs and both exception expiries now; cached plan flags
+    # never replace the shared contract or independent production conjunction.
     repo.require(plan.get('profile') == 'production' and not plan.get('release_blockers'),
                  'Only an approved production plan can pass publication preflight')
     repo.verify('production')

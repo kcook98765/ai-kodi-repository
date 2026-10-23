@@ -96,6 +96,8 @@ def qualify(profile='fixture'):
             repo.require(path.is_file() and repo.sha(path.read_bytes()) == old['sha256'], 'Previous version not retained')
             retained.append(old['id']+'-'+old['version'])
     import audit_candidate
+    # Fresh audited inputs retain exact runtime limitations; site mechanics do
+    # not exercise or upgrade any of the add-on's unobserved runtime scenarios.
     result = {'status':'PASS','profile':profile,'artifact_validation':repo.verify(profile),
             'independent_audit':audit_candidate.audit(profile),
             'whole_site_reproducible':True,'historical_versions_retained':retained,

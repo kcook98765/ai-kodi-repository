@@ -5,7 +5,9 @@ acknowledgment, technical release approval, observed runtime acceptance, final
 release approval and operator publication authority are separate assertions.
 Schema 3 adds only the bounded distribution route described below. An acknowledgment cannot provide missing
 rights, resolve an adverse finding or complete a test. Deferred testing remains
-ineligible for production. These runtime and authorization boundaries apply to every independently developed add-on.
+ineligible under existing policies. Only the separate initial-release coverage
+policy below may admit explicitly accepted unobserved scenarios while preserving
+their test status. These boundaries apply to every independently developed add-on.
 
 The [JSON Schema](REVIEW-RECORD-SCHEMA.json) describes structural interchange;
 `scripts/approval_contract.py` additionally validates decision consistency, dates,
@@ -297,3 +299,85 @@ complete synthetic record and blocked alternatives. They are never live approval
 records, provider permission or native-runtime proof. Tastemade receives no
 special case and remains subject to its existing attribution, distribution,
 runtime-scope and final-approval gates.
+
+## Scoped initial-release runtime coverage exception
+
+Opt in with schema 3 and `approval_policy="unofficial-integration-initial-release-v1"`.
+This changes no v1/v2 or `unofficial-integration-v1` decisions. The provider-only
+exception retains its scope, expiry and safeguards; neither exception supplies
+package rights, provider permission or operator publication authority.
+
+Add a closed `runtime_acceptance_exception` object with exactly these fields:
+
+- `scope="initial_release_runtime_coverage_only"`, `addon_id`, `addon_version`,
+  `package_sha256`, `source_commit`, nonempty unique `lanes`, UTC-second
+  `expires_at`, `scenarios`, `owner_decision`, `independent_verification`.
+- Each scenario has exactly `id`, `lane`, `risk_id`, `kind`, `observation`,
+  `description`, `supporting_evidence`. IDs are unique. The only allowed pairs
+  are `unobserved_functionality/not_observed` and
+  `environment_limitation/unavailable`. Descriptions explain the missing
+  observation or environmental cause. Environmental cases require unavailable
+  environment evidence. None of these observations is PASS.
+- Each evidence item has exactly `method` (`native`, `offline`, `environment`),
+  `status` (`passed`, `not_observed`, `unavailable`), nonblank `scope`, and pinned
+  `evidence` references. Supplemental passes retain their actual scope and never
+  upgrade an unobserved scenario. Failed/error results cannot enter this route.
+- `owner_decision` is an attributed `accepted` owner action with exact
+  `scenario_ids` and runtime `risk_ids`. Other statuses are `pending`, `declined`,
+  `revoked`. Its actor equals the existing distribution owner and separate
+  all-risk acknowledgment owner, ignoring case/outer whitespace.
+- `independent_verification` is an attributed `verified` action naming the same
+  scenario/runtime-risk sets, with `no_known_security_defects=true` and nonempty
+  `core_evidence`. Its actor differs from the accepting owner. Core evidence uses
+  the evidence-item shape above and includes scoped native **and** offline passed
+  results. Other statuses are `pending`, `rejected`, `revoked`.
+
+Actions use existing attribution, UTC recording time, rationale and immutable
+hash-pinned references. Pending is exactly `{"status":"pending"}`. Expiry follows
+both decisions; neither may be future-dated. Acceptance, independent verification,
+matching acknowledgment and current expiry are required at every assessment,
+including preflight. Reviewers must verify retained evidence substance; tools
+cannot authenticate actors or detect dishonest classifications merely from JSON.
+
+The inspected ZIP identity, source/hash and lane scope must match. Affected lanes
+retain `runtime_accepted=false`, attributed `runtime_test.status=deferred` and
+nonempty `outstanding_tests` containing exactly their scenario IDs. Unaffected
+lanes require actual passed acceptance. All lanes retain static acceptance and
+scoped runtime evidence. Scenario risk IDs equal the complete unresolved runtime
+set. Keep every runtime finding; no pending/failed lane, unlisted test or unrelated
+risk becomes eligible through this exception.
+
+Both consumers independently load the retention ledger as release history.
+Per-add-on entries retain immutable append chronology: the first identifies its
+initial released version/hash. With no entries the candidate may be initial;
+otherwise only that exact first artifact can use this route, including retained
+history after later versions. A later version cannot borrow the exception.
+Operators verify history completeness and chronology; never reorder/drop entries
+to manufacture eligibility. Direct assessment without history cannot activate
+the exception. Existing retention/hash and empty-lane guards remain unchanged.
+
+Plans/audits retain false runtime acceptance, deferred tests, exact observations,
+supplemental outcomes and all unresolved findings. They separately derive
+`runtime_exception_active` and `runtime_admission=owner_accepted_runtime_limitations`.
+Generated public notices list every scenario and scoped evidence outcome without
+private evidence paths. The auditor independently reconstructs the complete page;
+free-form disclosure or a forged plan cannot hide a limitation.
+
+Final approval is separate. `release_approved=true` requires an attributed
+`release_decision.status=approved`, `role=owner`, the same accepting owner, pinned
+evidence and `runtime_exception_sha256`. This is SHA-256 of the complete exception
+as UTF-8 JSON with sorted keys, compact separators (`,`, `:`) and
+`ensure_ascii=true`. Final time cannot precede either decision or be future-dated.
+Any exception edit invalidates this binding. Missing final approval still blocks
+production even when package-distribution eligibility is true. Offline plans
+always keep operator publication authority false.
+
+Content licensing/attribution, notices, archive safety, integrity, provenance,
+dependencies, independent audit and security/access controls remain nonwaivable.
+Known security or failed-functionality defects cannot be disguised as unobserved
+tests; independent verification and retained adverse findings are mandatory.
+Substantive rights defects cannot become provider terms or runtime limitations.
+This route grants no general waiver or Tastemade approval. Existing audio
+acceptance supplies no other-scenario acceptance or final authorization. Use a
+reviewed hash-bound successor, never an automatic/live approval migration. Upgrade
+all consumers together and regenerate complete toolchain/schema pins.
