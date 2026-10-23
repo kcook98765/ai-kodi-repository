@@ -3,15 +3,50 @@
 import copy
 import argparse
 import functools
+from html import unescape
 import http.server
 import json
 from pathlib import Path
 import threading
-from urllib.parse import urlsplit
+import re
+from urllib.parse import unquote, urlsplit
 from urllib.request import Request, urlopen
 import repository as repo
 
 ROOT = repo.ROOT
+
+def http_directory_entries(page, major):
+    """Source-matched replay for our ASCII listing, not a native Kodi test.
+
+    HTTPDirectory.cpp uses a case-insensitive DOTALL regex, then compares
+    normalized label and link. Matrix requires an attribute-free anchor.
+    See docs/NATIVE-ACCEPTANCE.md for pinned upstream sources and limitations.
+    """
+    repo.require(major in (19, 20, 21, 22), 'Unsupported parser replay version')
+    pattern = (r'<a href="(.*?)">\s*(.*?)\s*</a>(.+?)(?=<a|</tr|$)' if major == 19 else
+               r'<a href="([^"]*)"[^>]*>\s*(.*?)\s*</a>(.+?)(?=<a|</tr|$)')
+    entries = []
+    for href, label, _ in re.findall(pattern, page, re.I | re.S | re.ASCII):
+        link = href.removeprefix('/').split('?', 1)[0]
+        if major != 19:
+            link = link.split('#', 1)[0]
+        link = unescape(link)
+        name = unescape(label.strip()).removesuffix('/')
+        compare = unquote(link.removesuffix('/'))
+        if compare not in ('', '..') and (name == compare or (':' in name and './'+name == compare)):
+            entries.append(link)
+    return entries
+
+def bootstrap_listing(page, profile):
+    config = repo.load_config()
+    version = config['fixture_version'] if profile == 'fixture' else config['version']
+    filename = f'{config["addon_id"]}-{version}.zip'
+    results = {}
+    for major in (19, 20, 21, 22):
+        entries = http_directory_entries(page, major)
+        repo.require(entries == [filename], 'Kodi bootstrap listing must expose only the current installer')
+        results[str(major)] = entries
+    return results
 
 def selection(manifest, api):
     return [d for d in manifest.findall("extension[@point='xbmc.addon.repository']/dir")
@@ -35,7 +70,16 @@ def urls(profile, network=True):
         repo.require(len(dirs) == (0 if expected is None else 1), 'Wrong number of selected directories')
         if expected:
             repo.require('/catalogs/'+expected+'/' in dirs[0].findtext('info'), 'Wrong lane selected')
-    paths = set()
+    listing = bootstrap_listing((site/'index.html').read_text(), profile)
+    paths = {'', 'index.html'}
+    for record in plan['packages']:
+        if record['id'] == config['addon_id']:
+            filename = f'{record["id"]}-{record["version"]}.zip'
+            paths.update([filename, filename+'.sha256'])
+            blob = repo.safe_path(site, record['path']).read_bytes()
+            repo.require(repo.safe_path(site, filename).read_bytes() == blob, 'Bootstrap installer copy mismatch')
+            repo.require(repo.safe_path(site, filename+'.sha256').read_bytes() == (repo.sha(blob)+'\n').encode(),
+                         'Bootstrap installer sidecar mismatch')
     for directory in manifest.findall("extension[@point='xbmc.addon.repository']/dir"):
         repo.require(directory.findtext('hashes') == 'sha256' and directory.find('checksum').get('verify') == 'sha256', 'Hash policy mismatch')
         for tag in ('info','checksum','datadir','artdir'):
@@ -61,17 +105,20 @@ def urls(profile, network=True):
             thread.start()
             try:
                 for path in sorted(paths):
-                    expected = repo.safe_path(site,path).read_bytes()
+                    expected = repo.safe_path(site,path or 'index.html').read_bytes()
                     url = 'http://127.0.0.1:'+str(server.server_port)+'/'+path
                     with urlopen(Request(url,method='HEAD'),timeout=5) as response:
                         repo.require(response.status == 200 and int(response.headers['Content-Length']) == len(expected), 'HEAD failed')
                     with urlopen(url,timeout=5) as response:
-                        repo.require(response.status == 200 and response.read() == expected and 'text/html' not in response.headers.get('Content-Type',''), 'GET/content type failed')
+                        content_type = response.headers.get('Content-Type','').lower()
+                        repo.require(response.status == 200 and response.read() == expected and
+                                     (content_type.startswith('text/html') if path in ('', 'index.html') else 'text/html' not in content_type),
+                                     'GET/content type failed')
                     results.append({'path':path,'head':200,'get':200,'sha256':repo.sha(expected)})
             finally:
                 server.shutdown()
                 thread.join(timeout=5)
-    return {'status':'PASS','selection_cases':cases,'url_paths':len(paths),
+    return {'status':'PASS','selection_cases':cases,'bootstrap_parser_replay':listing,'url_paths':len(paths),
             'loopback_http':results,'public_https':'UNVERIFIED: no deployment authorized',
             'kodi_runtime_tested':False}
 

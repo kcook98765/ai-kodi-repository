@@ -113,6 +113,8 @@ class PublicationTests(unittest.TestCase):
             for name in ['config','packages','releases']:
                 shutil.copytree(r.ROOT/name,root/name)
             shutil.copy(r.ROOT/'LICENSE',root/'LICENSE')
+            (root/'config/production.json').write_bytes(r.json_bytes({'packages': [], 'external_dependencies': {}}))
+            (root/'releases/manifest.json').write_bytes(r.json_bytes({'schema': 1, 'packages': []}))
             with patch.object(r,'ROOT',root),patch.object(publication,'ROOT',root), \
                     patch.object(publication.audit_candidate,'ROOT',root):
                 r.build('production')

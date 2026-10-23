@@ -3,14 +3,34 @@
 Version-aware distribution infrastructure for independently developed Kodi
 add-ons. Repository installer: **`repository.ai.kodi` 0.1.0**.
 
-The initial catalogs contain only the repository installer. Tastemade, Aura and
-the disposable test add-ons are not distributed. Native Kodi installation and
-update acceptance remains a separate validation phase.
+Install entirely inside Kodi, using this HTTPS File manager source:
 
-[Download the repository installer](https://kcook98765.github.io/ai-kodi-repository/packages/repository.ai.kodi/repository.ai.kodi-0.1.0.zip)
-and its [SHA-256 checksum](https://kcook98765.github.io/ai-kodi-repository/packages/repository.ai.kodi/repository.ai.kodi-0.1.0.zip.sha256).
-Use Kodi's **Install from zip file** with that ZIP. GitHub's source archives are
-development source, not installable repository packages.
+```text
+https://kcook98765.github.io/ai-kodi-repository/
+```
+
+1. Open **Settings → File manager → Add source**, enter the URL, and name it **AI Kodi**.
+2. Open **Settings → Add-ons → Install from zip file**. If prompted, enable
+   **Unknown sources** under System → Add-ons and acknowledge Kodi's warning.
+3. Select **AI Kodi**, then **repository.ai.kodi-0.1.0.zip** (or the current
+   approved installer shown there).
+4. After the installed notification, open **Install from repository → AI Kodi Repository**.
+5. Browse the normal Kodi categories and install the desired compatible add-on.
+   On Omega, **Video add-ons → Tastemade 0.1.0** is published. Other current lanes
+   contain the repository installer only; Aura and disposable fixtures are not published.
+
+The root ZIP is a byte-identical copy of the canonical installer, with a
+SHA-256 sidecar. Ordinary add-ons are installed through **Install from repository**;
+the bootstrap page does not offer their ZIPs. Kodi resolves required dependencies
+and checks for updates according to its normal settings. Tastemade requires Kodi's
+Python API; InputStream Adaptive is optional and not an installation prerequisite.
+No browser, SMB share or ZIP transfer is required. Unknown sources is a standard
+Kodi requirement; a bootstrap sidecar is not automatically verified by manual ZIP
+installation. Repository-driven downloads retain the configured SHA-256 checks.
+
+These instructions describe the generated installation design. The bootstrap
+change still requires approved Pages promotion and native acceptance before it is
+claimed to work on the public source. See [the native acceptance plan](docs/NATIVE-ACCEPTANCE.md).
 
 The installer selects Matrix 19, Nexus 20, Omega 21 or Piers 22 catalogs by the
 `xbmc.addon` API version. Pages serves stable metadata, artwork and nested package

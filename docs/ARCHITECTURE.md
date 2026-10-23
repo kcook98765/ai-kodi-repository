@@ -1,23 +1,36 @@
 # Identity and layout
 
+This document is the authoritative distribution architecture. Existing OpenCode
+roles enter through [the standing workflow contract](AGENT-INTEGRATION.md),
+which references this architecture and the release/approval procedures rather
+than defining a separate repository policy.
+
 The public GitHub identity is `kcook98765/ai-kodi-repository`, explicitly
 selected by the owner. `repository.ai.kodi` follows Kodi's `repository.*` type prefix,
 lowercase dotted ID and manifest/folder equality conventions. This is a local
 identity choice, not a globally reserved ID or official Kodi endorsement.
 
+Each add-on keeps its independent development repository. This distribution
+repository owns reviewed release ZIPs, catalogs, artwork, retention records and
+update metadata. Ordinary add-ons require valid manifest IDs, declared extension
+points, dependencies and versions; Kodi derives their normal categories from
+those declarations (for example, a video plugin declares provides=video).
+Repository installation, dependency resolution and updates remain native Kodi
+operations. No custom installer or bootstrap add-on catalog replaces them.
+
 ```
-config/             repository identity, explicit lane ranges, empty production intake
+config/             repository identity, explicit lane ranges, reviewed production intake
 packages/           repository installer runtime assets only
 fixtures/           two MIT Toolkit-derived disposable versions
 scripts/            offline deterministic build, inspection, URL qualification
 tests/              hostile-package and release-boundary failure controls
 incoming/           ignored reviewed ZIP/evidence intake, never auto-discovered
-releases/           retained-version hash ledger; empty initially
+releases/           retained-version hash ledger
 plans/              manager readiness and developer handoff
 docs/               architecture, approval, monitoring and source references
 .opencode/          ignored local role profiles and scoped adapters
 dist/fixture/       ignored local qualification feed, artifacts, checksums and plan
-dist/production/    ignored empty production scaffold plus repository installer
+dist/production/    ignored reviewed production site and release plan
 reports/            ignored machine evidence and independent agent reports
 ```
 
@@ -107,8 +120,14 @@ Use GitHub Pages at `https://kcook98765.github.io/ai-kodi-repository/` for
 `catalogs/<lane>/addons.xml[.sha256]`, `packages/<id>/<id>-<version>.zip[.sha256]`
 and `artwork/<lane>/<id>/<asset>`. Deploy a generated static artifact with
 `.nojekyll`. Stable paths make Kodi's datadir concatenation and artwork resolution
-work; directories need not offer a file listing. An index page can provide direct
-installer/download links after explicit publication approval.
+work; nested directories need no listing. The root index is a Kodi HTTPDirectory-
+compatible bootstrap containing one filename-matching link to the current
+installer. Root copies of every retained installer ZIP and sidecar are immutable,
+byte-identical mirrors of the canonical nested packages. The configured installer
+version selects the link automatically. Ordinary add-ons remain catalog-only
+installation choices; required public disclosures stay on the root page.
+Generation, independent inventory/page reconstruction, publication preflight and
+source-matched parser qualification all cover this bootstrap contract.
 
 Retain identical reviewed ZIPs and SHA256SUMS as GitHub Release assets. A pinned
 asset URL is `https://github.com/kcook98765/ai-kodi-repository/releases/download/<tag>/<id>-<version>.zip`;

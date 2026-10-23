@@ -428,6 +428,11 @@ def audit(profile='fixture'):
             assert path(out/'release-assets', name).read_bytes() == data
             assets[name] = digest(data)
         expected_site.update([relative, relative+'.sha256'])
+        if key[0] == config['addon_id']:
+            bootstrap = f'{key[0]}-{key[1]}.zip'
+            assert path(site, bootstrap).read_bytes() == blob, 'Bootstrap installer copy mismatch'
+            assert path(site, bootstrap+'.sha256').read_bytes() == (digest(blob)+'\n').encode(), 'Bootstrap installer sidecar mismatch'
+            expected_site.update([bootstrap, bootstrap+'.sha256'])
         packages[key] = (manifest, files)
         receipts.append({'id':key[0], 'version':key[1], 'entries':sorted(files), 'sha256':digest(blob), 'bytes':len(blob)})
     assert set(plan['catalogs']) == set(config['lanes'])
@@ -454,8 +459,8 @@ def audit(profile='fixture'):
     # Reconstruct the whole page from reviewed inputs. Substring matching alone
     # would accept notices hidden in comments, styles or hidden ancestors.
     page = path(site, 'index.html').read_bytes().decode('utf-8')
-    links = ''.join(f'<li><a href="{prefix}packages/{aid}/{aid}-{ver}.zip">{aid} {ver}</a></li>'
-                    for aid,ver in expected)
+    filename = f'{config["addon_id"]}-{installer_version}.zip'
+    links = f'<li><a href="{filename}">{filename}</a></li>'
     notices = []
     for key,item in expected.items():
         record = item.get('provenance', {})
@@ -485,13 +490,12 @@ def audit(profile='fixture'):
         expected_page = ('<!doctype html><title>Private Kodi candidate</title>'
                          '<p>Not approved for release. Native acceptance and rights must be resolved.</p><ul>'+links+'</ul>\n')
     else:
-        availability = ('Native Kodi acceptance is pending. Only the repository installer is currently available.</p>'
-                        '<p>Tastemade and Aura are not published.' if len(expected) == 1 else
-                        'Available packages are listed below. Compatibility and acceptance are package-specific.')
         expected_page = ('<!doctype html><html lang="en"><meta charset="utf-8">'
                          '<meta name="viewport" content="width=device-width, initial-scale=1">'
                          '<title>AI Kodi Repository</title><h1>AI Kodi Repository</h1>'
-                         '<p>Version-aware Kodi repository infrastructure. '+availability+'</p><ul>'+links+'</ul>'
+                         '<p>Add this HTTPS source in Kodi File manager and name it AI Kodi. '
+                         'Use Install from zip file to select the repository installer below. '
+                         'Then use Install from repository to browse compatible add-ons by category.</p><ul>'+links+'</ul>'
                          '<p>Each ZIP has a SHA-256 sidecar at the same URL plus .sha256.</p>'
                          '<p><a href="https://github.com/'+config['github_repository']+'">'
                          'Source, architecture and release procedures</a></p></html>\n')

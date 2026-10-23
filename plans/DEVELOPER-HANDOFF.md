@@ -1,3 +1,9 @@
+> Historical fixture-foundation snapshot, retained unchanged below. It is not
+> current distribution state, operating policy or publication approval.
+> Follow [the standing workflow contract](../docs/AGENT-INTEGRATION.md);
+> use config/production.json and releases/manifest.json for current state,
+> and docs/APPROVAL-CONTRACT.md for current review-record rules.
+
 # Developer Handoff
 
 **Role:** Developer handoff (local fixture foundation only).

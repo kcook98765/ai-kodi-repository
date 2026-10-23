@@ -1,3 +1,9 @@
+> Historical fixture-foundation snapshot, retained unchanged below. It is not
+> current distribution state, operating policy or publication approval.
+> Follow [the standing workflow contract](../docs/AGENT-INTEGRATION.md);
+> use config/production.json and releases/manifest.json for current state,
+> and docs/APPROVAL-CONTRACT.md for current review-record rules.
+
 # Final readiness: PASS — initial infrastructure only
 
 Tester and reviewer independently read `scripts/check_publication.py` and `scripts/audit_candidate.py`; prior reviewer inspection covered `scripts/repository.py`. No concrete blocking source defect found. Source-access gap resolved. Checks enforce empty production intake, installer-only catalogs, exact site inventory, ZIP/hash/source consistency and opt-in HTTPS. Assertion-based checks require nonoptimized execution.

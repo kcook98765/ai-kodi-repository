@@ -62,10 +62,14 @@ def site_audit(plan):
     repo.require(plan == json.loads((ROOT/'dist/production/release-plan.json').read_text()),
                  'Plan differs from verified on-disk production plan')
     independent = audit_candidate.audit('production')
+    config = repo.load_config()
     paths = {'.nojekyll','index.html'}
     for record in plan['packages']:
         repo.require(record['fixture_only'] is False, 'Fixture in production')
         paths.update([record['path'],record['path']+'.sha256'])
+        if record['id'] == config['addon_id']:
+            bootstrap = f'{record["id"]}-{record["version"]}.zip'
+            paths.update([bootstrap, bootstrap+'.sha256'])
         manifest, files = repo.inspect_zip((ROOT/'dist/production/site'/record['path']).read_bytes())
         for name,data in files.items():
             scan_bytes(record['id']+'/'+name,data)
@@ -85,7 +89,9 @@ def site_audit(plan):
 def public_https(plan):
     base = repo.load_config()['base_url']
     receipts = []
-    for path,digest in sorted(plan['site_files'].items()):
+    # Kodi opens the documented directory URL, not just index.html directly.
+    checks = list(plan['site_files'].items()) + [('', plan['site_files']['index.html'])]
+    for path,digest in sorted(checks):
         url = base+path
         with urlopen(Request(url,method='HEAD'),timeout=20) as head:
             repo.require(head.status==200 and head.geturl()==url, 'Unexpected HEAD redirect/status')
@@ -97,7 +103,11 @@ def public_https(plan):
                          'Unexpected GET redirect/status/size')
             content_type = response.headers.get('Content-Type','')
         repo.require(repo.sha(data)==digest, 'Public bytes mismatch: '+path)
-        if path!='index.html':
+        if path in ('', 'index.html'):
+            repo.require(content_type.lower().startswith('text/html') and head_type.lower().startswith('text/html'),
+                         'Bootstrap index must be text/html')
+            qualify.bootstrap_listing(data.decode('utf-8'), 'production')
+        else:
             repo.require('text/html' not in content_type and 'text/html' not in head_type,
                          'HTML instead of repository artifact')
         receipts.append({'url':url,'head':200,'get':200,'content_type':content_type,'sha256':digest})

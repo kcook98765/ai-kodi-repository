@@ -382,6 +382,12 @@ def build(profile):
             record['approval'] = item['approval']
         records.append(record)
         parsed.append((item,manifest,files))
+        if aid == config['addon_id']:
+            # Versioned bootstrap mirrors are copies, never a second packaging
+            # operation. Retain every installer version just like canonical ZIPs.
+            bootstrap = site/f'{aid}-{ver}.zip'
+            write_output(bootstrap, item['blob'], immutable=True)
+            write_output(Path(str(bootstrap)+'.sha256'), checksum, immutable=True)
     catalogs = {}
     for lane, settings in config['lanes'].items():
         selected = [(item,m,f) for item,m,f in parsed if lane in item['lanes']]
@@ -400,7 +406,11 @@ def build(profile):
         catalogs[lane] = {'path': path.relative_to(site).as_posix(), 'sha256': sha(data),
                           'ids': {m.get('id'):m.get('version') for _,m,_ in selected}, 'warnings': warnings}
     write_output(site/'.nojekyll', b'')
-    links = ''.join(f'<li><a href="{r["path"]}">{r["id"]} {r["version"]}</a></li>' for r in records)
+    current_version = config['fixture_version'] if profile == 'fixture' else config['version']
+    filename = f'{config["addon_id"]}-{current_version}.zip'
+    # Kodi HTTPDirectory compares the anchor text with its relative href.
+    # Keep the anchor attribute-free for Matrix and retain trailing markup.
+    links = f'<li><a href="{filename}">{filename}</a></li>'
     notices = ''.join('<section data-unofficial-package="'+r['id']+'-'+r['version']+'"><h2>'
                       +r['id']+' '+r['version']+'</h2><pre>'
                       +escape(r['approval']['unofficial_integration']['disclosure']['release_text'])
@@ -414,14 +424,12 @@ def build(profile):
         page = ('<!doctype html><title>Private Kodi candidate</title>'
                 '<p>Not approved for release. Native acceptance and rights must be resolved.</p><ul>'+links+'</ul>\n')
     else:
-        availability = ('Native Kodi acceptance is pending. Only the repository installer is currently available.</p>'
-                        '<p>Tastemade and Aura are not published.' if len(records) == 1 else
-                        'Available packages are listed below. Compatibility and acceptance are package-specific.')
         page = ('<!doctype html><html lang="en"><meta charset="utf-8">'
                 '<meta name="viewport" content="width=device-width, initial-scale=1">'
                 '<title>AI Kodi Repository</title><h1>AI Kodi Repository</h1>'
-                '<p>Version-aware Kodi repository infrastructure. '
-                +availability+'</p><ul>'+links+'</ul>'
+                '<p>Add this HTTPS source in Kodi File manager and name it AI Kodi. '
+                'Use Install from zip file to select the repository installer below. '
+                'Then use Install from repository to browse compatible add-ons by category.</p><ul>'+links+'</ul>'
                 '<p>Each ZIP has a SHA-256 sidecar at the same URL plus .sha256.</p>'
                 '<p><a href="https://github.com/'+config['github_repository']+'">'
                 'Source, architecture and release procedures</a></p></html>\n')
@@ -491,6 +499,11 @@ def verify(profile):
         manifest, _ = inspect_zip(blob, record['provenance']['runtime_files'])
         require(manifest.get('id') == record['id'] and manifest.get('version') == record['version'], 'Package identity mismatch')
         require((output/'release-assets'/Path(record['path']).name).read_bytes() == blob, 'Release mirror mismatch')
+        if record['id'] == config['addon_id']:
+            bootstrap = site/f'{record["id"]}-{record["version"]}.zip'
+            require(safe_path(site, bootstrap.name).read_bytes() == blob, 'Bootstrap installer copy mismatch')
+            require(safe_path(site, bootstrap.name+'.sha256').read_bytes() == (sha(blob)+'\n').encode(),
+                    'Bootstrap installer sidecar mismatch')
     for lane, record in plan['catalogs'].items():
         data = safe_path(site, record['path']).read_bytes()
         require(sha(data) == record['sha256'] == Path(str(site/record['path'])+'.sha256').read_text().strip(), 'Catalog checksum mismatch')

@@ -27,6 +27,10 @@ class IntakeTests(unittest.TestCase):
             shutil.copytree(r.ROOT / name, self.root / name)
         shutil.copy(r.ROOT / 'LICENSE', self.root / 'LICENSE')
         (self.root / 'incoming').mkdir()
+        # Synthetic admission tests must not inherit the live release ledger or
+        # private production intake when a real add-on has been published.
+        (self.root / 'config/production.json').write_bytes(r.json_bytes({'packages': [], 'external_dependencies': {}}))
+        (self.root / 'releases/manifest.json').write_bytes(r.json_bytes({'schema': 1, 'packages': []}))
         for module in [r, audit, publication, q]:
             p = patch.object(module, 'ROOT', self.root)
             p.start()
@@ -170,17 +174,27 @@ class IntakeTests(unittest.TestCase):
         self.admit(); r.build('production')
         review = self.root / 'incoming/0.json'
         original = json.loads(review.read_text())
+        rejected_runtime = copy.deepcopy(original['compatibility'])
+        rejected_runtime['nexus']['runtime_accepted'] = False
         for field, value in [('rights_approved', False), ('release_approved', False),
                              ('source_commit', 'bad'), ('package_sha256', '0'*64),
                              ('runtime_files', {'addon.xml':'0'*64}),
-                             ('compatibility', {'nexus': {'static_accepted': True, 'runtime_accepted': False, 'evidence': []}})]:
+                             ('compatibility', rejected_runtime)]:
             changed = copy.deepcopy(original); changed[field] = value
             review.write_bytes(r.json_bytes(changed))
             inputs = json.loads((self.root / 'config/production.json').read_text())
             inputs['packages'][0]['review_record_sha256'] = r.sha(review.read_bytes())
             (self.root / 'config/production.json').write_bytes(r.json_bytes(inputs))
+            # Keep the generated plan's input binding coherent so the auditor
+            # reaches the actual admission predicates, not an earlier stale hash.
+            plan_path = self.root / 'dist/production/release-plan.json'
+            plan = json.loads(plan_path.read_text())
+            plan['input_config_sha256'] = r.sha((self.root / 'config/production.json').read_bytes())
+            plan_path.write_bytes(r.json_bytes(plan))
             with self.subTest(field=field):
-                with self.assertRaises((AssertionError, ValueError)): audit.audit('production')
+                with patch.object(audit, 'reviewed_inputs', wraps=audit.reviewed_inputs) as admission:
+                    with self.assertRaises((AssertionError, ValueError)): audit.audit('production')
+                    admission.assert_called_once()
                 with self.assertRaises((ValueError, KeyError)): r.build('production')
 
     def test_independent_auditor_rejects_unlisted_package_and_lane(self):

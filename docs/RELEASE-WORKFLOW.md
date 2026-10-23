@@ -26,7 +26,8 @@ to publish. User approval must bind the concrete result.
    release approval. Legacy valid records retain their boolean contract. No
    acknowledgment or deferral replaces a required approval or completed test.
 4. The manager builds local candidates, verifies catalogs/sidecars/dependencies,
-   compares whole-site repeat builds, checks historical retention, and prepares
+   compares whole-site repeat builds, checks historical retention and root installer
+   copy identity, qualifies Kodi directory discovery, and prepares
    a release plan containing exact package/feed hashes and intended actions.
    Independent reviewer freezes its approval against the plan and input hashes.
 5. Before a new remote creation or promotion, review owner/name, visibility, branch policy,
@@ -135,3 +136,26 @@ intact. Never fabricate owner decisions or convert failed/unknown tests to PASS
 for a dry run. Truthful pending real records use private candidate qualification;
 positive synthetic fixtures exercise eligible production admission without
 supplying any actual release approval.
+
+
+## Bootstrap promotion and future installers
+
+The standard public entry point remains the root HTTPS File manager source.
+Each build derives its sole installer link from the configured installer version,
+creates byte-identical versioned root mirrors and SHA-256 sidecars, and retains
+older installer copies. Ordinary add-ons remain in version-compatible catalogs
+with native categories, dependencies and updates. No per-add-on bootstrap links
+are added when a new independently developed add-on is admitted.
+
+Review root copies as additional site files in the complete release plan. Their
+canonical ZIP hashes, existing release assets, review records, catalogs and
+retention ledger must remain unchanged for an index-only release. The independent
+auditor reconstructs the page and permitted mirrors from reviewed inputs; a
+matching forged plan alone cannot admit extra files or altered copies. Required
+provider/runtime disclosures remain visible and unchanged in meaning.
+
+This bootstrap implementation grants no publication authority and requires no
+new package release. Approve an exact source/site digest before Pages promotion.
+Do not run `check_publication.py --https` against undeployed expected bytes and
+report it as a pass. After an approved promotion, verify public HTTPS and perform
+the separately authorized [native acceptance plan](NATIVE-ACCEPTANCE.md).
