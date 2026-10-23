@@ -1,5 +1,34 @@
 <?xml version='1.0' encoding='utf-8'?>
 <addons>
+  <addon id="plugin.video.tastemade" name="Tastemade" version="0.1.0" provider-name="kcook98765">
+    <requires>
+      <import addon="xbmc.python" version="3.0.1" />
+      <import addon="inputstream.adaptive" version="20.3.18" optional="true" />
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="default.py">
+      <provides>video</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+      <summary lang="en_GB">Unofficial Tastemade videos and optional live TV</summary>
+      <description lang="en_GB">Browse VOD shows, movies, seasons and episodes with programme artwork, summaries and clear navigation.
+
+Use an eligible Tastemade account to play entitled, provider-declared unencrypted HLS videos. Your profile can reuse its viewing session, verify sign-in and sign out locally.
+
+Optional live TV opens the current channel list directly and uses compatible InputStream Adaptive. Live TV is off by default; installation or enabling is offered only with your consent when you choose Play.
+
+Keeps Kodi's native views and playback controls. Includes original generic icon and background artwork, not official service branding.</description>
+      <disclaimer lang="en_GB">Independent, unofficial add-on; not affiliated with or endorsed by Tastemade. Service/content names identify their respective owners. Eligible account permissions are required; no purchase, DRM or region bypass is provided. Password masking does not encrypt saved settings. Media/session URLs may appear in native Kodi or player logs; review logs before sharing and protect reusable credentials. Original artwork is not a legal guarantee of trademark clearance.</disclaimer>
+      <platform>all</platform>
+      <license>MIT</license>
+      <language>en</language>
+      <website>https://www.tastemade.com/</website>
+      <news>Prepared the permanent plugin.video.tastemade identity and standalone installation guide. Earlier development builds use a separate settings profile; sign in again after installing this add-on. Includes VOD and season browsing, optional direct InputStream Adaptive live TV and original icon/fanart.</news>
+      <assets>
+        <icon>resources/icon.png</icon>
+        <fanart>resources/fanart.jpg</fanart>
+      </assets>
+    </extension>
+  </addon>
   <addon id="repository.ai.kodi" version="0.1.0" name="AI Kodi Repository" provider-name="AI Kodi repository maintainers">
     <requires>
       <import addon="xbmc.addon" version="19.0.0" />
