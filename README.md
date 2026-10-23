@@ -28,9 +28,12 @@ No browser, SMB share or ZIP transfer is required. Unknown sources is a standard
 Kodi requirement; a bootstrap sidecar is not automatically verified by manual ZIP
 installation. Repository-driven downloads retain the configured SHA-256 checks.
 
-These instructions describe the generated installation design. The bootstrap
-change still requires approved Pages promotion and native acceptance before it is
-claimed to work on the public source. See [the native acceptance plan](docs/NATIVE-ACCEPTANCE.md).
+The bootstrap is published. Core repository installation and Tastemade discovery
+and installation are accepted on **Kodi 21.2 Omega**, based on the owner's manual
+native PASS report. Native updates and native acceptance on other Kodi versions
+remain pending. The owner reports a Tastemade launch error, deferred to separate
+add-on debugging; its cause is unresolved and is not attributed to Kodi 21.2. See the
+[acceptance record and remaining tests](docs/NATIVE-ACCEPTANCE.md).
 
 The installer selects Matrix 19, Nexus 20, Omega 21 or Piers 22 catalogs by the
 `xbmc.addon` API version. Pages serves stable metadata, artwork and nested package

@@ -1,3 +1,17 @@
+## Current development status — 2026-10-23
+
+The published bootstrap phase is closed for core repository installation and
+Tastemade discovery/installation on Kodi 21.2 Omega, based solely on the
+[owner-reported native PASS observations](../docs/NATIVE-ACCEPTANCE.md).
+Native refresh/updates are not tested; native acceptance on other Kodi versions,
+including 21.3, remains pending. Tastemade's owner-reported launch error is an
+unresolved, separate add-on debugging task, with no cause assigned to Kodi 21.2.
+Existing test evidence, publication receipts and frozen package approvals remain
+unchanged. These status notes authorize no package or catalog changes.
+
+Next: [new-session OpenCode lifecycle handoff](OPENCODE-LIFECYCLE-HANDOFF.md).
+Adapter implementation and publication need their own approved task scope.
+
 > Historical fixture-foundation snapshot, retained unchanged below. It is not
 > current distribution state, operating policy or publication approval.
 > Follow [the standing workflow contract](../docs/AGENT-INTEGRATION.md);

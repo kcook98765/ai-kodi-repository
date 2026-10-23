@@ -6,6 +6,52 @@ source, then install compatible add-ons through Install from repository.
 Read README.md for the complete instructions and Kodi's Unknown sources step.
 No new server, custom installer or external browser is needed.
 
+## Current acceptance record — owner-reported Kodi 21.2 Omega
+
+Owner report recorded on 2026-10-23 in the project conversation. The owner
+manually tested the published public HTTPS source and requested acceptance of
+these observations as native PASS results. They were not independently observed
+by Codex or OpenCode. Device/platform, profile, exact build identifier, test
+timestamp and supporting screenshots/logs were not supplied with this report;
+do not infer a clean profile or label it as independent Shield or Kodi Lab proof.
+
+| Owner-reported native observation | Kodi version | Result |
+| --- | --- | --- |
+| Added the public HTTPS source through Kodi File manager | 21.2 Omega | PASS — owner-reported |
+| Repository ZIP appeared and was selectable | 21.2 Omega | PASS — owner-reported |
+| Repository ZIP installed successfully | 21.2 Omega | PASS — owner-reported |
+| AI Kodi Repository appeared in Install from repository | 21.2 Omega | PASS — owner-reported |
+| Tastemade appeared under Video add-ons | 21.2 Omega | PASS — owner-reported |
+| Tastemade installed successfully through the repository | 21.2 Omega | PASS — owner-reported |
+
+**Disposition:** core Kodi-native repository installation and add-on discovery
+and installation are accepted on Kodi 21.2 Omega. The published bootstrap phase
+is closed for this scope. This does not establish native update or runtime
+acceptance, or compatibility with an untested Kodi version.
+
+| Remaining area | Status |
+| --- | --- |
+| Native repository refresh and updates, including a real version upgrade | NOT TESTED |
+| Matrix 19.5, Nexus 20.5, Omega 21.3 and Piers 22 preview native acceptance | PENDING — no extension of the 21.2 report |
+| Separate dependency details, installed ID/version/origin and client checksum readback | Not separately reported |
+| Tastemade runtime | UNRESOLVED — owner reports an error on launch; deferred to separate Tastemade debugging |
+
+The Tastemade launch error's text, logs and cause are not established here.
+Do not attribute it to Kodi 21.2 or turn installation success into playback,
+login or runtime acceptance. Debugging is a separate task in the independent
+Tastemade development repository; no package/catalog change follows from this
+acceptance record and no frozen approval record is amended.
+
+Publication remains the earlier approved source commit
+`d6e1359a6668e688891359869ef2c7d34bc2ddff` and Pages commit
+`e66f5f6ac88450b92a5d1c5a2d43be70b86c513f`. The completed static/HTTPS checks,
+historical native preflight blockers and publication receipts retain their
+original scope and dates. This owner report supplements them; it does not
+retroactively change an earlier NOT RUN result into an agent-observed PASS.
+
+The remaining sections retain the verification methods and separately authorized
+acceptance procedures. Planned Omega 21.3 tests below remain pending.
+
 ## What local checks establish
 
 `qualify.py` replays the HTTPDirectory anchor regex and label/link equality for
