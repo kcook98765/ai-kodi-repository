@@ -9,6 +9,7 @@ user approval. It is not an executable workflow and grants no permission.
 - Approval schema/policy version, attributable rights/technical/final decisions:
 - Owner acknowledgment, unresolved risks and runtime deferrals (all must be resolved for v2 production):
 - For v3 only: independent all-materials distribution review; service findings and applicable authorization requirements; exact owner distribution acceptance; broad rights pending and full accepted terms inventory:
+- If owner-risk provider exception is used: attributable repository owner, current decision/expiry, exact provider/add-on ID/version/ZIP checksum, known terms concern, unverified provider authorization, explicit risk acceptance and provider-gate-only scope; package licensing/attribution and all other gates remain mandatory:
 - For v3 only: bundled notice member/hash, complete escaped public disclosure (terms URL, no affiliation/authorization, support and entitlement obligations), and retained evidence digest/substance verification:
 - `release-plan.json` SHA-256 and independent reviewer report digest:
 - Complete Release asset names/hashes and retained prior-release ledger hash:

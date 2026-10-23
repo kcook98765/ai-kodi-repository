@@ -126,8 +126,9 @@ prove a real Kodi GUI install/update or all-feature add-on behavior.
 Opt in with exactly `schema_version=3` and
 `approval_policy="unofficial-integration-v1"`. Fully supported releases, including
 unofficial clients with supported service-use findings, continue to use strict
-v2. This route requires a nonempty list of residual **provider-service terms**
-findings. It supplies neither provider endorsement nor authorization to operate
+v2. This route requires a nonempty list of **provider-service terms**
+findings: residual uncertainty, or a known provider-authorization concern accepted
+under the explicit owner-risk decision below. It supplies neither provider endorsement nor authorization to operate
 an integration. Approval records and publications still require separate review
 and operator authority; no existing record is automatically migrated or approved.
 
@@ -146,8 +147,8 @@ Add one closed `unofficial_integration` object:
 | Member | Required assertion |
 | --- | --- |
 | `package_distribution_review` | Attributed `verified` action with `scope=all_distributed_materials`; other statuses are `pending`, `rejected`, `revoked` and block |
-| `service_use_review` | Attributed `terms_unresolved` action with `scope=runtime_service_content_and_marks`, exact provider-terms `risk_ids`, `provider_permission_obtained=false`, `provider_content_authorization=not_established`; `pending`, `blocked`, `revoked` block |
-| `owner_distribution_decision` | Attributed `accepted` action with `role=owner`, exact provider-terms `risk_ids`, `authorization_claimed=false`; `pending`, `declined`, `revoked` block |
+| `service_use_review` | Attributed `terms_unresolved` action, or `authorization_unverified` with `upstream_provider` and the owner-risk exception below; both require `scope=runtime_service_content_and_marks`, exact provider-terms `risk_ids`, `provider_permission_obtained=false`, `provider_content_authorization=not_established`; `pending`, `blocked`, `revoked` block |
+| `owner_distribution_decision` | Attributed `accepted` action with `role=owner`, exact provider-terms `risk_ids`, `authorization_claimed=false`; optionally includes the closed `provider_authorization_exception` below; `pending`, `declined`, `revoked` block |
 | `disclosure` | Exactly `package_path`, `package_sha256`, `release_text`; canonical relative notice path in the hashed runtime inventory, actual nonempty UTF-8 ZIP member, and nonblank reviewed public text |
 
 New actions use the existing `status`, `actor`, `role`, real UTC-second
@@ -166,6 +167,62 @@ eligibility effect. Each service/owner action names the exact nonempty provider
 terms set with no duplicates, omissions or additions. Decisions inherit the
 record's exact package, source, runtime inventory, policy and lane scope.
 
+### Explicit owner-risk provider-authorization decision
+
+For schema 3 unofficial integrations only, the repository owner may elect to
+publish independently developed software without verified provider authorization,
+including when known provider terms restrict third-party integration. This is a
+repository publication-policy decision; it grants no provider permission, content
+rights or legal clearance. Seeking provider permission is not required for this
+route. The concern remains unresolved and visible in plans and audits.
+
+Record `service_use_review.status=authorization_unverified` and its nonblank
+`upstream_provider`. Add `provider_authorization_exception` to the existing
+attributed owner distribution action. It inherits that action's actor, owner
+role, recording time, rationale, pinned evidence and exact risk IDs. A separate
+acknowledgment by that same owner remains mandatory. Its exact required keys are:
+
+```json
+{
+  "scope": "repository_provider_authorization_gate_only",
+  "upstream_provider": "Synthetic provider",
+  "addon_id": "plugin.video.example",
+  "addon_version": "1.0.0",
+  "package_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "provider_authorization_verified": false,
+  "provider_terms_concern": "Known terms restrict third-party clients; owner accepts publication risk without verified permission or legal clearance.",
+  "owner_accepts_risk": true,
+  "expires_at": "2026-12-01T00:00:00Z"
+}
+```
+
+This is a synthetic excerpt, not an approval or a complete review record. The
+provider must equal the service review's provider. ID and version must equal
+the independently inspected ZIP manifest; checksum must equal the frozen ZIP.
+`expires_at` is a real UTC-second timestamp after the owner decision. The owner
+decision must already be recorded, accepted and unexpired at every assessment,
+including fresh publication preflight. Missing, malformed, future-dated, expired,
+declined, revoked or mismatched decisions fail closed. Expiry does not trigger
+automatic withdrawal of existing artifacts. A later promotion needs a renewed
+reviewed decision. Actor identity and ownership of the repository remain facts
+the operator must verify; these tools do not authenticate human signatures.
+
+This replaces **only this repository's provider-authorization gate**. It does not
+replace the independent all-materials package-rights audit, notices/attribution,
+security, provenance, integrity, dependencies, runtime or final release approval.
+It cannot clear a `rights`, `runtime`, `technical` or `other` finding. A package
+rights defect must never be relabeled `provider_terms`. A service assessment must
+record the known adverse terms and actual behavior; the owner accepts that risk
+without treating the concern as resolved. A known unverified provider gate uses
+`authorization_unverified`, not the prior residual-uncertainty disposition.
+
+Absent this nested exception, the prior schema 3 route remains unchanged.
+`authorization_unverified` without an active matching exception blocks release;
+an exception attached to any other service status is contradictory. Broad rights
+remain false/pending, provider permission remains false, and content authorization
+remains `not_established`. The derived `provider_authorization_exception_active`
+flag and full attributed decision appear in each plan and independent audit.
+
 ### Nonwaivable review requirements
 
 Before recording `package_distribution_review=verified`, independently inspect
@@ -183,17 +240,19 @@ Assess actual accounts/entitlements, remote images/text, streaming, caching,
 downloads, SDKs, application-bundle parsing, identifiers, reverse engineering and
 sharing behavior. Review actual provider terms, including adverse clauses, and
 retain their precise evidence. A package-distribution assessment must address
-any restriction independently requiring authorization to **distribute the
-package or operate the integration**. When that authorization is applicable and
-unsupported, or distribution cannot be responsibly supported independently of
-risk acceptance, block release. Owner acceptance cannot override it. Separately
+any restriction requiring authorization to **distribute the package or operate
+the integration**. Missing rights to bundled or exported material always block.
+The repository's separate provider-authorization gate may be replaced only by
+the explicit owner-risk decision above; this changes no actual restriction or
+legal obligation. Separately
 licensed provider-material distribution uses the strict route with affirmative
 rights evidence. No DRM, region, payment or authentication bypass exception is
 created.
 
-Only residual uncertainty about provider-service terms/applicability or
-runtime-use restrictions may be classified `provider_terms`; an applicable
-unsatisfied authorization requirement cannot be relabeled that way. Every
+Only provider-service terms/applicability, runtime-use restrictions or the
+explicit unverified provider-authorization concern may be `provider_terms`.
+Unauthorized package content, licensing/ownership or attribution findings may
+never receive that category. Every
 unresolved `rights`, `runtime`, `technical` or `other` risk remains a hard blocker.
 Machine validation cannot determine ownership, contractual applicability, legal
 substance or authenticate reviewers. A dishonest terms label supplies no rights

@@ -7,6 +7,7 @@ as approval. Candidate results describe structural qualification only.
 import argparse
 import approval_contract
 import copy
+from datetime import datetime, timezone
 import hashlib
 from html import escape
 import io
@@ -136,7 +137,10 @@ def reviewed_inputs(config, profile):
             assert all(type(acceptance[k]) is bool for k in ['static_accepted', 'runtime_accepted'])
             assert isinstance(acceptance['evidence'], list)
             assert all(isinstance(e, str) and e.strip() for e in acceptance['evidence'])
-        approval = approval_contract.assess(record, item['lanes'])
+        manifest, files = archive_files(blob)
+        assert {n:digest(b) for n,b in files.items()} == record['runtime_files']
+        approval = approval_contract.assess(record, item['lanes'],
+            package_identity=(manifest.get('id'), manifest.get('version')))
         approval['review_record_sha256'] = digest(raw)
         approval['package_sha256'] = digest(blob)
         # Independently enforce every strict production gate, even if a plan lies.
@@ -166,7 +170,30 @@ def reviewed_inputs(config, profile):
                 package = value['package_distribution_review']; service = value['service_use_review']
                 owner = value['owner_distribution_decision']; ack = record['owner_acknowledgment']
                 assert package['status'] == 'verified' and package['scope'] == 'all_distributed_materials'
-                assert service['status'] == 'terms_unresolved' and service['scope'] == 'runtime_service_content_and_marks'
+                assert service['scope'] == 'runtime_service_content_and_marks'
+                exception = owner.get('provider_authorization_exception')
+                if service['status'] == 'authorization_unverified':
+                    assert isinstance(exception, dict)
+                if exception is not None:
+                    assert service['status'] == 'authorization_unverified'
+                    assert set(exception) == {'scope', 'upstream_provider', 'addon_id', 'addon_version',
+                        'package_sha256', 'provider_authorization_verified', 'provider_terms_concern',
+                        'owner_accepts_risk', 'expires_at'}
+                    assert exception['scope'] == 'repository_provider_authorization_gate_only'
+                    assert exception['provider_authorization_verified'] is False and exception['owner_accepts_risk'] is True
+                    assert exception['upstream_provider'] == service['upstream_provider']
+                    assert all(isinstance(exception[k], str) and exception[k].strip() and
+                               exception[k] == exception[k].strip() for k in ('upstream_provider', 'provider_terms_concern'))
+                    assert (exception['addon_id'], exception['addon_version'], exception['package_sha256']) == (
+                        manifest.get('id'), manifest.get('version'), digest(blob))
+                    assert ack['actor'].strip().casefold() == owner['actor'].strip().casefold()
+                    assert all(re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', stamp)
+                               for stamp in (owner['recorded_at'], exception['expires_at']))
+                    recorded = datetime.strptime(owner['recorded_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+                    expiry = datetime.strptime(exception['expires_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+                    assert recorded <= datetime.now(timezone.utc) < expiry
+                else:
+                    assert service['status'] == 'terms_unresolved'
                 assert service['provider_permission_obtained'] is False
                 assert service['provider_content_authorization'] == 'not_established'
                 assert owner['status'] == 'accepted' and owner['role'] == 'owner' and owner['authorization_claimed'] is False
@@ -185,8 +212,6 @@ def reviewed_inputs(config, profile):
                     assert test['evidence']
                 assert approval['package_distribution_eligible'] is True
                 assert approval['accepted_terms_risks'] == risks and approval['rights_status'] == 'pending'
-        manifest, files = archive_files(blob)
-        assert {n:digest(b) for n,b in files.items()} == record['runtime_files']
         if record.get('schema_version') == 3:
             notice = record['unofficial_integration']['disclosure']
             path(ROOT/'incoming', notice['package_path'])

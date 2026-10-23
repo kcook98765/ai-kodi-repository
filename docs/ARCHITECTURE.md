@@ -55,7 +55,10 @@ Every unresolved v2 risk blocks production. Explicit schema 3 adds only a
 reviewed independently developed unofficial-integration distribution route, with
 broad rights pending, retained accepted terms findings, separate service review
 and owner distribution decision, bound public disclosures and unchanged runtime
-and nonwaivable authorization gates. No current approvals are migrated. Legacy records retain their original
+and nonwaivable package-rights gates. An explicit, attributable, expiring owner-risk
+decision may replace only the repository's provider-authorization gate, binding
+provider, inspected add-on ID/version and frozen ZIP hash while reporting
+authorization unverified. It supplies no legal clearance. No current approvals are migrated. Legacy records retain their original
 boolean meaning and report their attribution/evidence limitations explicitly.
 The current numeric version comparator accepts only x.y.z and fails closed on
 Kodi suffixes/epochs. Extending it requires Kodi-equivalent comparison tests.
