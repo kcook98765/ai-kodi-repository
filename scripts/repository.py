@@ -5,6 +5,7 @@ import argparse
 import approval_contract
 import copy
 import hashlib
+from html import escape
 import io
 import json
 import os
@@ -258,7 +259,15 @@ def production_packages(config, profile='production'):
         approval['package_sha256'] = sha(blob)
         blockers = approval['release_blockers']
         require(profile == 'candidate' or not blockers, 'Independent package approval evidence missing: ' + '; '.join(blockers))
-        inspect_zip(blob, record['runtime_files'])
+        manifest, files = inspect_zip(blob, record['runtime_files'])
+        if record.get('schema_version') == 3:
+            disclosure = record['unofficial_integration']['disclosure']
+            safe_path(ROOT/'incoming', disclosure['package_path'], exists=False)
+            require(bool(files[disclosure['package_path']].decode('utf-8').strip()), 'Empty bundled disclosure')
+            if not item['lanes']:
+                require(any((old['id'], old['version'], old['sha256']) ==
+                            (manifest.get('id'), manifest.get('version'), sha(blob))
+                            for old in ledger['packages']), 'Empty v3 lanes require retained release')
         packages.append({'blob': blob, 'lanes': item['lanes'], 'fixture_only': False,
                          'provenance': record, 'approval': approval, 'release_blockers': blockers})
     current = {}
@@ -376,6 +385,11 @@ def build(profile):
                           'ids': {m.get('id'):m.get('version') for _,m,_ in selected}, 'warnings': warnings}
     write_output(site/'.nojekyll', b'')
     links = ''.join(f'<li><a href="{r["path"]}">{r["id"]} {r["version"]}</a></li>' for r in records)
+    notices = ''.join('<section data-unofficial-package="'+r['id']+'-'+r['version']+'"><h2>'
+                      +r['id']+' '+r['version']+'</h2><pre>'
+                      +escape(r['approval']['unofficial_integration']['disclosure']['release_text'])
+                      +'</pre></section>' for r in records
+                      if r.get('approval', {}).get('schema_version') == 3)
     if profile == 'fixture':
         page = ('<!doctype html><title>AI Kodi repository: local draft</title>'
                 '<p>Not published. Fixture artifacts must never be deployed.</p><ul>'+links+'</ul>\n')
@@ -394,6 +408,8 @@ def build(profile):
                 '<p>Each ZIP has a SHA-256 sidecar at the same URL plus .sha256.</p>'
                 '<p><a href="https://github.com/'+config['github_repository']+'">'
                 'Source, architecture and release procedures</a></p></html>\n')
+    if notices:
+        page = page.replace('</html>', notices+'</html>') if '</html>' in page else page+notices
     write_output(site/'index.html', page.encode())
     site_files = {p.relative_to(site).as_posix():sha(p.read_bytes()) for p in sorted(site.rglob('*')) if p.is_file()}
     release_assets = {p.name:sha(p.read_bytes()) for p in sorted((output/'release-assets').iterdir()) if p.is_file()}
@@ -405,6 +421,10 @@ def build(profile):
             'retention_ledger_sha256':sha((ROOT/'releases/manifest.json').read_bytes()),
             'toolchain': {'python':sys.version.split()[0], 'zlib':zlib.ZLIB_RUNTIME_VERSION,
                           'builder_sha256':sha(Path(__file__).read_bytes()),
+                          **{name+'_sha256':sha((Path(__file__).parent/filename).read_bytes())
+                             for name,filename in [('auditor', 'audit_candidate.py'), ('qualifier', 'qualify.py'),
+                                                   ('preflight', 'check_publication.py')]},
+                          'review_schema_sha256':sha((Path(__file__).parents[1]/'docs/REVIEW-RECORD-SCHEMA.json').read_bytes()),
                           'approval_contract_sha256':sha(Path(approval_contract.__file__).read_bytes())},
             'release_assets':release_assets, 'site_files':site_files,
             'site_manifest_sha256':sha(json_bytes(site_files)),
@@ -434,6 +454,12 @@ def verify(profile):
     require(plan['input_config_sha256'] == sha((ROOT/('config/candidate.json' if profile=='candidate' else 'config/production.json')).read_bytes()), 'Stale intake configuration')
     require(plan['retention_ledger_sha256'] == sha((ROOT/'releases/manifest.json').read_bytes()), 'Stale retention ledger')
     require(plan['toolchain']['builder_sha256'] == sha(Path(__file__).read_bytes()), 'Stale builder evidence')
+    for name,filename in [('auditor', 'audit_candidate.py'), ('qualifier', 'qualify.py'),
+                          ('preflight', 'check_publication.py')]:
+        require(plan['toolchain'][name+'_sha256'] == sha((Path(__file__).parent/filename).read_bytes()),
+                'Stale '+name+' evidence')
+    require(plan['toolchain']['review_schema_sha256'] ==
+            sha((Path(__file__).parents[1]/'docs/REVIEW-RECORD-SCHEMA.json').read_bytes()), 'Stale review schema')
     require(plan['toolchain']['approval_contract_sha256'] == sha(Path(approval_contract.__file__).read_bytes()), 'Stale approval contract')
     actual_site = {p.relative_to(site).as_posix():sha(p.read_bytes()) for p in sorted(site.rglob('*')) if p.is_file()}
     require(actual_site == plan['site_files'] and sha(json_bytes(actual_site)) == plan['site_manifest_sha256'], 'Site contains missing/changed/unreviewed files')

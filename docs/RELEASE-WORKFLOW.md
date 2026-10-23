@@ -20,7 +20,7 @@ to publish. User approval must bind the concrete result.
    release_approved, rights_approved, fixture_only=false and compatibility entries
    with static_accepted, runtime_accepted and evidence references. Evidence is
    human reviewed; booleans do not authenticate its claims.
-   New records should use the version 2 [approval contract](APPROVAL-CONTRACT.md)
+   Ordinary new records use the version 2 [approval contract](APPROVAL-CONTRACT.md)
    and [schema](REVIEW-RECORD-SCHEMA.json): separately record rights review,
    owner acknowledgment, technical approval, runtime results/deferrals and final
    release approval. Legacy valid records retain their boolean contract. No
@@ -98,3 +98,20 @@ packages and historical downloads replace the initial installer-only assumptions
 Canonical ZIP order, 1980 timestamps and regular 0644 entries remain required by
 the independent audit. Numeric x.y.z versions, file-based library declarations
 and the existing external dependency-snapshot restriction remain unchanged.
+
+Schema 3 / `unofficial-integration-v1` is an opt-in alternative only for an
+independently developed package with supported distribution rights and residual
+provider-service terms uncertainty. Follow the complete v3 contract: independently
+review all distributed content/attribution and any applicable distribution or
+operation authorization requirement; record separate service findings, owner
+acknowledgment and owner distribution decision; bind bundled and release-facing
+non-affiliation disclosures. Broad rights stay false/pending. Owner acceptance
+supplies no provider authorization and cannot clear missing rights, attribution,
+required tests, security/provenance issues or an independent authorization
+restriction. Record accepted terms findings as unresolved in every report.
+
+Use a newly reviewed successor record and new intake digest only under separate
+release authority. Upgrade builder/auditor/qualifier/preflight together and
+regenerate the complete toolchain/schema-pinned plan. Check complete rendered
+notice bytes and retained evidence digests/substance before final approval.
+Candidate-profile qualification remains private and cannot authorize publication.
