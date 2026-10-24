@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "profile": "d3-pr-pilot-v1",
+  "activated": false,
+  "requires_explicit_installation_review": true,
+  "overlay": {
+    "kodi-repo-manager": {"kodi_publication": "allow"},
+    "kodi-addon-tester": {"kodi_publication": "deny"},
+    "kodi-release-reviewer": {"kodi_publication": "deny"},
+    "kodi-addon-developer": {"kodi_publication": "deny"}
+  }
+}

@@ -159,3 +159,12 @@ new package release. Approve an exact source/site digest before Pages promotion.
 Do not run `check_publication.py --https` against undeployed expected bytes and
 report it as a pass. After an approved promotion, verify public HTTPS and perform
 the separately authorized [native acceptance plan](NATIVE-ACCEPTANCE.md).
+
+## Local D1/D2 publication simulation
+
+The [local publication implementation](PUBLICATION-OPERATOR.md) adds frozen
+P/R/E proposals, explicitly simulated approvals and a file-backed fake state
+machine. It reuses these release gates and cannot publish, change an existing
+approval, or promote a candidate into production. Its successful synthetic cases
+are not native acceptance, GitHub enforcement tests or production authorization.
+Current real proposals retain missing-input, compatibility and decision blockers.

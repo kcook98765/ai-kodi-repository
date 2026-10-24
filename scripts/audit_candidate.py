@@ -17,6 +17,7 @@ import re
 import stat
 import xml.etree.ElementTree as ET
 import zipfile
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 ID = re.compile(r'[a-z0-9]+(?:[._-][a-z0-9]+)+\Z')
@@ -62,6 +63,33 @@ def xml(data):
 def numeric(value):
     assert isinstance(value, str) and VERSION.fullmatch(value)
     return tuple(map(int, value.split('.')))
+
+
+def configuration(profile):
+    """Independent candidate identity/retention selection; never imports builder."""
+    production_file = path(ROOT, 'config/repository.json')
+    production = json.loads(production_file.read_text())
+    assert production['addon_id'] == 'repository.ai.kodi' and 'candidate_context' not in production
+    candidate_file = ROOT/'config/candidate-repository.json'
+    if profile != 'candidate' or not candidate_file.exists():
+        return production, production_file, path(ROOT, 'releases/manifest.json')
+    candidate_file = path(ROOT, 'config/candidate-repository.json')
+    config = json.loads(candidate_file.read_text()); context = config['candidate_context']
+    assert set(context) == {'task_id', 'production_config_sha256', 'production_ledger_sha256'}
+    assert re.fullmatch('[0-9a-f]{32}', context['task_id'])
+    assert config['addon_id'] == 'repository.ai.kodi.candidate.'+context['task_id']
+    assert context['production_config_sha256'] == digest(production_file.read_bytes())
+    assert context['production_ledger_sha256'] == digest(path(ROOT, 'releases/manifest.json').read_bytes())
+    assert config['lanes'] == production['lanes'] and config['publication_authorized'] is False
+    url = urlsplit(config['base_url'])
+    assert url.scheme == 'https' and url.hostname and not url.username and not url.password
+    assert not url.query and not url.fragment and url.path.endswith('/') and '%' not in config['base_url']
+    production_url = urlsplit(production['base_url'])
+    assert '..' not in url.path.split('/')
+    assert (url.hostname.lower().rstrip('.'),url.port or 443) != (production_url.hostname.lower().rstrip('.'),production_url.port or 443)
+    ledger = path(ROOT, 'releases/candidate-manifest.json')
+    assert json.loads(ledger.read_text()).get('repository_id') == config['addon_id']
+    return config, candidate_file, ledger
 
 
 def archive_files(blob):
@@ -218,6 +246,11 @@ def reviewed_inputs(config, profile):
         raw = path(ROOT/'incoming', item['review_record']).read_bytes()
         assert digest(raw) == item['review_record_sha256']
         record = json.loads(raw)
+        if 'candidate_context' in config:
+            assert record.get('schema_version') == 2 and record.get('approval_policy') == 'strict-v1'
+            assert record['rights_approved'] is False and record['release_approved'] is False
+            assert all(record.get(k) == {'status':'pending'} for k in ('rights_review','technical_release','release_decision'))
+            assert all(v['static_accepted'] is False and v['runtime_accepted'] is False for v in record['compatibility'].values())
         assert record['package_sha256'] == digest(blob) and record['fixture_only'] is False
         assert re.fullmatch('[0-9a-f]{40}', record['source_commit'])
         assert record['source_repository'].startswith('https://github.com/')
@@ -231,7 +264,7 @@ def reviewed_inputs(config, profile):
             assert all(isinstance(e, str) and e.strip() for e in acceptance['evidence'])
         manifest, files = archive_files(blob)
         assert {n:digest(b) for n,b in files.items()} == record['runtime_files']
-        history = json.loads((ROOT/'releases/manifest.json').read_text())['packages']
+        history = json.loads(configuration(profile)[2].read_text())['packages']
         approval = approval_contract.assess(record, item['lanes'],
             package_identity=(manifest.get('id'), manifest.get('version')), release_history=history)
         approval['review_record_sha256'] = digest(raw)
@@ -321,12 +354,12 @@ def reviewed_inputs(config, profile):
             if not item['lanes']:
                 assert any((old['id'], old['version'], old['sha256']) ==
                            (manifest.get('id'), manifest.get('version'), digest(blob))
-                           for old in json.loads((ROOT/'releases/manifest.json').read_text())['packages'])
+                           for old in json.loads(configuration(profile)[2].read_text())['packages'])
         key = (manifest.get('id'), manifest.get('version'))
         assert key not in expected
         expected[key] = {'blob': blob, 'files': files, 'lanes': item['lanes'],
                          'fixture_only': False, 'provenance': record, 'approval': approval}
-    for old in json.loads((ROOT/'releases/manifest.json').read_text())['packages']:
+    for old in json.loads(configuration(profile)[2].read_text())['packages']:
         if (old['id'], old['version']) == (config['addon_id'], config['version']):
             continue  # Generated installer is checked with the complete inventory below.
         assert digest(expected[(old['id'], old['version'])]['blob']) == old['sha256']
@@ -359,14 +392,17 @@ def audit(profile='fixture'):
     assert profile in ('fixture', 'production', 'candidate')
     prefix = {'fixture':'qualification/', 'production':'', 'candidate':'candidate/'}[profile]
     out = ROOT/'dist'/profile; site = out/'site'
-    config = json.loads((ROOT/'config/repository.json').read_text())
+    config, config_file, ledger_file = configuration(profile)
     plan = json.loads((out/'release-plan.json').read_text())
     assert plan['profile'] == profile and plan['publication_authorized'] is False
     assert plan['fixture_only'] is (profile == 'fixture') and plan['remote_actions_executed'] == []
-    assert plan['config_sha256'] == digest((ROOT/'config/repository.json').read_bytes())
+    assert plan['config_sha256'] == digest(config_file.read_bytes())
     intake_path = 'config/candidate.json' if profile == 'candidate' else 'config/production.json'
     assert plan['input_config_sha256'] == digest((ROOT/intake_path).read_bytes())
-    assert plan['retention_ledger_sha256'] == digest((ROOT/'releases/manifest.json').read_bytes())
+    assert plan['retention_ledger_sha256'] == digest(ledger_file.read_bytes())
+    if 'candidate_context' in config:
+        assert plan.get('candidate_context') == config['candidate_context']
+        assert plan['proposed_actions'] == ['Local candidate feed preparation only; no remote writes']
     assert plan['toolchain']['approval_contract_sha256'] == digest(Path(approval_contract.__file__).read_bytes())
     for name,filename in [('builder', 'repository.py'), ('auditor', 'audit_candidate.py'),
                           ('qualifier', 'qualify.py'), ('preflight', 'check_publication.py')]:
@@ -393,7 +429,7 @@ def audit(profile='fixture'):
     assert len(keys) == len(set(keys)) and set(keys) == set(expected), 'Unreviewed or missing package'
     if profile != 'fixture':
         hashes = {(p['id'], p['version']):p['sha256'] for p in plan['packages']}
-        for old in json.loads((ROOT/'releases/manifest.json').read_text())['packages']:
+        for old in json.loads(ledger_file.read_text())['packages']:
             assert hashes.get((old['id'], old['version'])) == old['sha256'], 'Installer/package retention mismatch'
     expected_site = {'.nojekyll', 'index.html'}; assets = {}; packages = {}; receipts = []
     for record in plan['packages']:

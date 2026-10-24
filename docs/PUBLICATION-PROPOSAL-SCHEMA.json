@@ -1,0 +1,821 @@
+{
+  "$defs": {
+    "execution": {
+      "additionalProperties": false,
+      "properties": {
+        "audience": {
+          "additionalProperties": false,
+          "properties": {
+            "app_id": {
+              "const": 2,
+              "type": "integer"
+            },
+            "app_installation_id": {
+              "const": 3,
+              "type": "integer"
+            },
+            "epoch": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "installation_uuid": {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            "key_policy_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "installation_uuid",
+            "epoch",
+            "app_id",
+            "app_installation_id",
+            "key_policy_sha256"
+          ],
+          "type": "object"
+        },
+        "created_at": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "destination": {
+          "additionalProperties": false,
+          "properties": {
+            "base_url": {
+              "const": "https://publication.invalid/ai-kodi-repository/"
+            },
+            "branch": {
+              "const": "gh-pages"
+            },
+            "owner_id": {
+              "const": 1,
+              "type": "integer"
+            },
+            "path": {
+              "const": "/"
+            },
+            "repository": {
+              "const": "simulation/ai-kodi-repository"
+            },
+            "repository_id": {
+              "const": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "repository",
+            "repository_id",
+            "owner_id",
+            "base_url",
+            "branch",
+            "path"
+          ],
+          "type": "object"
+        },
+        "expected": {
+          "additionalProperties": false,
+          "properties": {
+            "ledger_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "main_sha": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "pages_sha": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "pages_tree": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "site_files": {
+              "additionalProperties": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "main_sha",
+            "pages_sha",
+            "pages_tree",
+            "ledger_sha256",
+            "site_files"
+          ],
+          "type": "object"
+        },
+        "expires_at": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "mode": {
+          "const": "local-simulation"
+        },
+        "nonce": {
+          "pattern": "^[0-9a-f]{32}$",
+          "type": "string"
+        },
+        "operations": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "create_tag",
+                  "create_draft",
+                  "upload_assets",
+                  "verify_assets",
+                  "publish_release",
+                  "promote_pages",
+                  "verify_public",
+                  "finalize_ledger"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "minItems": 0,
+          "type": "array"
+        },
+        "payload_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "publication_authorized": {
+          "const": false
+        },
+        "recovery": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "completed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "remote_state_sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "transaction": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "transaction",
+                "remote_state_sha256",
+                "completed"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "review_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "schema": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "mode",
+        "publication_authorized",
+        "payload_sha256",
+        "review_sha256",
+        "destination",
+        "expected",
+        "nonce",
+        "created_at",
+        "expires_at",
+        "audience",
+        "operations",
+        "recovery"
+      ],
+      "type": "object"
+    },
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "catalogs": {
+          "type": "object"
+        },
+        "created_at": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "destination": {
+          "additionalProperties": false,
+          "properties": {
+            "base_url": {
+              "const": "https://publication.invalid/ai-kodi-repository/"
+            },
+            "branch": {
+              "const": "gh-pages"
+            },
+            "owner_id": {
+              "const": 1,
+              "type": "integer"
+            },
+            "path": {
+              "const": "/"
+            },
+            "repository": {
+              "const": "simulation/ai-kodi-repository"
+            },
+            "repository_id": {
+              "const": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "repository",
+            "repository_id",
+            "owner_id",
+            "base_url",
+            "branch",
+            "path"
+          ],
+          "type": "object"
+        },
+        "expected": {
+          "additionalProperties": false,
+          "properties": {
+            "ledger_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "main_sha": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "pages_sha": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "pages_tree": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "site_files": {
+              "additionalProperties": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "main_sha",
+            "pages_sha",
+            "pages_tree",
+            "ledger_sha256",
+            "site_files"
+          ],
+          "type": "object"
+        },
+        "files": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "sha256",
+              "size"
+            ],
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "lanes": {
+          "items": {
+            "enum": [
+              "matrix",
+              "nexus",
+              "omega",
+              "piers"
+            ]
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "mode": {
+          "const": "local-simulation"
+        },
+        "packages": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "pages": {
+          "additionalProperties": false,
+          "properties": {
+            "changes": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "after": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "before": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "pattern": "^[0-9a-f]{64}$",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "before",
+                  "after"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "commit": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "parent": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "site_files": {
+              "additionalProperties": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "site_prefix": {
+              "type": "string"
+            },
+            "tree": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "parent",
+            "commit",
+            "tree",
+            "site_prefix",
+            "site_files",
+            "changes"
+          ],
+          "type": "object"
+        },
+        "plan_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "production",
+            "candidate"
+          ]
+        },
+        "publication_authorized": {
+          "const": false
+        },
+        "qualification": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "interpreter": {
+                "additionalProperties": false,
+                "properties": {
+                  "evidence": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "sha256"
+                      ],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "scope": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "passed",
+                      "failed",
+                      "deferred",
+                      "unverified"
+                    ]
+                  },
+                  "target": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "target",
+                  "scope",
+                  "evidence"
+                ],
+                "type": "object"
+              },
+              "native": {
+                "additionalProperties": false,
+                "properties": {
+                  "evidence": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "sha256"
+                      ],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "scope": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "passed",
+                      "failed",
+                      "deferred",
+                      "unverified"
+                    ]
+                  },
+                  "target": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "target",
+                  "scope",
+                  "evidence"
+                ],
+                "type": "object"
+              },
+              "static": {
+                "additionalProperties": false,
+                "properties": {
+                  "evidence": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "sha256"
+                      ],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "scope": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "passed",
+                      "failed",
+                      "deferred",
+                      "unverified"
+                    ]
+                  },
+                  "target": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "target",
+                  "scope",
+                  "evidence"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "static",
+              "interpreter",
+              "native"
+            ],
+            "type": "object"
+          },
+          "propertyNames": {
+            "enum": [
+              "matrix",
+              "nexus",
+              "omega",
+              "piers"
+            ]
+          },
+          "type": "object"
+        },
+        "release": {
+          "additionalProperties": false,
+          "properties": {
+            "assets": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha256",
+                  "size"
+                ],
+                "type": "object"
+              },
+              "minProperties": 1,
+              "type": "object"
+            },
+            "commit": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "tag",
+            "commit",
+            "name",
+            "notes",
+            "assets"
+          ],
+          "type": "object"
+        },
+        "retention": {
+          "additionalProperties": false,
+          "properties": {
+            "after": {
+              "type": "object"
+            },
+            "after_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "before": {
+              "type": "object"
+            },
+            "before_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "config_path": {
+              "type": "string"
+            },
+            "config_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "main_commit": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "main_parent": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "successor_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "before",
+            "after",
+            "before_sha256",
+            "after_sha256",
+            "successor_path",
+            "config_path",
+            "config_sha256",
+            "main_parent",
+            "main_commit"
+          ],
+          "type": "object"
+        },
+        "schema": {
+          "const": 1,
+          "type": "integer"
+        },
+        "source": {
+          "additionalProperties": false,
+          "properties": {
+            "commit": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "owner_id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "repository_id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "repository",
+            "repository_id",
+            "owner_id",
+            "commit"
+          ],
+          "type": "object"
+        },
+        "synthetic": {
+          "type": "boolean"
+        },
+        "toolchain": {
+          "additionalProperties": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema",
+        "mode",
+        "publication_authorized",
+        "profile",
+        "synthetic",
+        "source",
+        "lanes",
+        "destination",
+        "expected",
+        "created_at",
+        "toolchain",
+        "files",
+        "packages",
+        "catalogs",
+        "plan_sha256",
+        "qualification",
+        "release",
+        "pages",
+        "retention"
+      ],
+      "type": "object"
+    },
+    "review": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "mode": {
+          "const": "local-simulation"
+        },
+        "payload_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "publication_authorized": {
+          "const": false
+        },
+        "report_path": {
+          "const": "review-report.txt"
+        },
+        "report_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "reviewer": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "role": {
+          "const": "kodi-release-reviewer"
+        },
+        "schema": {
+          "const": 1,
+          "type": "integer"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "mode",
+        "publication_authorized",
+        "payload_sha256",
+        "reviewer",
+        "role",
+        "created_at",
+        "report_path",
+        "report_sha256",
+        "scope"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Canonical UTF-8 sorted compact ASCII-escaped JSON without newline; semantic cross-object, file, approval, retention and operation-order checks are mandatory in publication_proposal.py. Never production authorization.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/payload"
+    },
+    {
+      "$ref": "#/$defs/review"
+    },
+    {
+      "$ref": "#/$defs/execution"
+    }
+  ],
+  "title": "Local-only Kodi publication payload, independent review and execution proposal"
+}

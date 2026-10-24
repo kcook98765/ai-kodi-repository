@@ -5,6 +5,8 @@
 /incoming/*
 !/incoming/README.md
 /config/candidate.json
+/config/candidate-repository.json
+/releases/candidate-manifest.json
 __pycache__/
 *.pyc
 .env*

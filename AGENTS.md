@@ -1,6 +1,8 @@
 # AI Kodi repository
 
 Read docs/AGENT-INTEGRATION.md (Repository workflow contract v1) before work.
+The approved local Phases A-C path is described in docs/LIFECYCLE-PREPARATION.md;
+it supports task-bound static checks and isolated candidate feeds without changing role permissions.
 It is the standing role/workflow entry point and references the authoritative
 architecture, installation instructions and release-approval contract. Use the
 configured `kodi-repo-manager` and existing tester/reviewer children. No new
@@ -21,3 +23,9 @@ tool cannot qualify production inputs. Write only the loaded role's permitted
 report document; stricter worktree profiles remain stricter. Configuration,
 adapters and machine evidence are operator-controlled. Test success supplies no
 publication authority. Report missing evidence and warnings explicitly.
+
+Local Phase D1/D2 publication preparation is documented in
+docs/PUBLICATION-OPERATOR.md. Existing build/qualify/review tools may inspect
+task-bound frozen publication payloads; no role may issue owner authorization
+or execute even the simulated publisher. Simulation records never authorize
+GitHub writes or replace compatibility, rights or independent review evidence.

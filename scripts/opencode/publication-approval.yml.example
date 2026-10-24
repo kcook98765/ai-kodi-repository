@@ -1,0 +1,38 @@
+# INACTIVE DESIGN TEMPLATE. Not a GitHub workflow or usable authorization.
+# D1/D2 accepts only local simulated approvals. Adoption, action pins, human
+# environment protection and remote authorization require separate approval.
+name: Publication approval template - disabled
+on:
+  workflow_dispatch:
+    inputs:
+      proposal_sha256:
+        required: true
+        type: string
+      nonce:
+        required: true
+        type: string
+      destination_id:
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: kodi-publication-owner-review
+  cancel-in-progress: false
+jobs:
+  scope:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Activation prerequisite
+        run: >-
+          echo 'Disabled: requires reviewed scope artifact producer and
+          commit-pinned artifact upload action; no publisher credentials.'
+  owner-review:
+    if: ${{ false }}
+    needs: scope
+    runs-on: ubuntu-latest
+    environment: kodi-production-publication
+    steps:
+      - name: Owner review boundary
+        run: echo 'No production credential or publication operation exists in this template.'

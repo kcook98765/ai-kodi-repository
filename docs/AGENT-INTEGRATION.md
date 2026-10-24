@@ -1,5 +1,22 @@
 # Repository workflow contract v1
 
+For the explicitly approved Phases A-C **isolated local installation**, read
+[task-bound preparation](LIFECYCLE-PREPARATION.md). Its versioned templates extend
+the existing tool schemas for owner-enrolled public GitHub sources and candidate
+package/metadata preparation, per-lane static checks and complete isolated candidate
+feeds while retaining the existing role permission rules.
+The persistent canonical installation is unchanged; the fixture-only capability
+descriptions below describe that older profile. Neither installation can publish.
+Use the actual loaded schema and exact installation/task binding; never infer
+capabilities from this document or substitute a fixture for a task input.
+
+Approved local D1/D2 adds [frozen publication preparation](PUBLICATION-OPERATOR.md)
+through existing task-bound build/qualify/review tools. Their effective permission
+rules stay unchanged. Real candidate payloads preserve all production blockers;
+owner authorization and publication execution are absent from role tools. The
+separate file-only simulated operator accepts no production destination or human
+authorization. Canonical activation and live operator setup remain unapproved.
+
 This is the standing workflow entry point for the existing OpenCode repository
 roles. Follow it without relying on session-specific architecture instructions.
 If this contract is absent from the bound checkout, report **BLOCKED: workflow
@@ -109,3 +126,23 @@ Expanding persistent tools to real production preparation, adding a repository
 to the GET allowlist, or changing shared Toolkit behavior requires separate
 approval. Do not change permissions, runtime grants, provider credentials,
 services or publishing integrations in an instruction-alignment task.
+
+## Opt-in disposable D3 pilot source integration
+
+[PUBLICATION-D3-LOCAL.md](PUBLICATION-D3-LOCAL.md) describes the local
+`d3-pr-pilot-v1` extension. Source templates support task-bound
+`action=publication_pilot` on build/qualify/review, distinct trusted role/session/
+tool receipts, and a separately opted-in manager-only `kodi_publication` helper.
+No passing local check installs it, enrolls a destination or supplies credentials.
+The active installation is unchanged.
+
+After explicit pilot adoption: manager status captures a complete observed
+baseline, manager build freezes P, independent tester/reviewer seal their own
+reports, and manager build seals R. Separate owner authority permits bounded
+metadata staging; request presents one exact PR-bound E. Only authenticated exact
+owner review permits its one-shot execution. Child roles retain existing report
+paths and cannot publish. Technical qualification, generic PR approval and chat
+approval are separate from publication authorization. Native/interpreter/Piers
+limitations remain visible. This inert disposable profile cannot authorize
+production. See the local D3 document for replay, revocation, reconciliation,
+recovery and activation prerequisites.

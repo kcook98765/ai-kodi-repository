@@ -38,7 +38,7 @@ def http_directory_entries(page, major):
     return entries
 
 def bootstrap_listing(page, profile):
-    config = repo.load_config()
+    config = repo.load_config(profile)
     version = config['fixture_version'] if profile == 'fixture' else config['version']
     filename = f'{config["addon_id"]}-{version}.zip'
     results = {}
@@ -53,7 +53,7 @@ def selection(manifest, api):
             if repo.version(d.get('minversion')) <= repo.version(api) <= repo.version(d.get('maxversion'))]
 
 def urls(profile, network=True):
-    config = repo.load_config()
+    config = repo.load_config(profile)
     site = ROOT/'dist'/profile/'site'
     output = ROOT/'dist'/profile
     plan = json.loads((output/'release-plan.json').read_text())
@@ -136,7 +136,7 @@ def qualify(profile='fixture'):
                          'Previous version not retained')
             retained.append(ver)
     else:
-        ledger = json.loads((ROOT/'releases/manifest.json').read_text())
+        ledger = json.loads(repo.ledger_path(profile).read_text())
         prefix = 'candidate/' if profile == 'candidate' else ''
         for old in ledger['packages']:
             path = site/prefix/f'packages/{old["id"]}/{old["id"]}-{old["version"]}.zip'

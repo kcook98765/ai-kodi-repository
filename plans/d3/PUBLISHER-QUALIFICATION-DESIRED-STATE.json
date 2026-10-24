@@ -1,0 +1,182 @@
+{
+  "schema": 1,
+  "kind": "design-only-d3-desired-state",
+  "execution_enabled": false,
+  "credentials_installed": false,
+  "accounts_created": false,
+  "github_resources_created": false,
+  "owner": {"login": "kcook98765", "user_id": 56806582},
+  "proposed_destination": {
+    "organization": "kcook98765-kodi-qualification",
+    "organization_id": null,
+    "repository_owner_type": "Organization",
+    "repository_owner_id": null,
+    "repository": "kcook98765-kodi-qualification/ai-kodi-publisher-d3-qualification",
+    "repository_id": null,
+    "visibility": "public",
+    "base_url": "https://kcook98765-kodi-qualification.github.io/ai-kodi-publisher-d3-qualification/",
+    "pages_source": {"branch": "gh-pages", "path": "/", "build_type": "legacy"},
+    "https_enforced": true,
+    "ownership_verified": false
+  },
+  "production_denylist": {
+    "repository_ids": [1428864210],
+    "repositories": ["kcook98765/ai-kodi-repository"],
+    "origins": ["https://kcook98765.github.io"],
+    "installer_ids": ["repository.ai.kodi"]
+  },
+  "qualification": {
+    "proposed_mode": "isolated-transport-qualification",
+    "mode_implemented": false,
+    "test_addon_id": "script.ai.kodi.d3.fixture",
+    "versions": ["1.0.0", "1.1.0"],
+    "installer_id_template": "repository.ai.kodi.candidate.<pilot-task-id>",
+    "pilot_task_id": null,
+    "pilot_task_id_is_stable_campaign_feed_identity": true,
+    "per_proposal_source_task_and_nonce_are_separate": true,
+    "fixture_source_branch": "d3-fixture-source",
+    "fixture_source_commits": {"F10": null, "F11": null},
+    "addon_catalog_lanes": ["nexus"],
+    "native_acceptance": "UNVERIFIED",
+    "target_interpreter_compatibility": "UNVERIFIED",
+    "piers_static": "UNVERIFIED",
+    "production_authorized": false,
+    "published_ledger_initial_packages": []
+  },
+  "host": {
+    "agent_user": "kodi-repo-agent-d3",
+    "publisher_user": "kodi-publisher-d3",
+    "agent_uid": null,
+    "publisher_uid": null,
+    "publisher_supplementary_groups": [],
+    "code_root": "/opt/ai-kodi-publisher-d3/versions/<code-sha256>",
+    "launcher": "/usr/local/libexec/ai-kodi-publisher-d3-entry",
+    "launcher_arguments": [],
+    "policy_root": "/etc/ai-kodi-publisher-d3",
+    "state_root": "/var/lib/ai-kodi-publisher-d3",
+    "runtime_root": "/run/ai-kodi-publisher-d3",
+    "agent_root": "/var/lib/ai-kodi-agent-d3",
+    "one_shot_only": true,
+    "persistent_service": false,
+    "root_admin_trusted": true,
+    "current_admin_model_execution_isolation": "BLOCKED",
+    "backup_destination": null
+  },
+  "github_app": {
+    "proposed_name": "ai-kodi-publisher-d3-claw",
+    "app_id": null,
+    "installation_id": null,
+    "bot_user_id": null,
+    "bot_login": null,
+    "selected_repository_ids": [],
+    "maximum_repository_permissions": {
+      "contents": "write",
+      "actions": "write",
+      "pull_requests": "write",
+      "administration": "read",
+      "pages": "read",
+      "metadata": "read"
+    },
+    "forbidden_write_permissions": ["administration", "workflows", "deployments", "issues"],
+    "per_operation_token_caps_required": true
+  },
+  "environments": [
+    {
+      "name": "kodi-d3-publication",
+      "id": null,
+      "required_owner_id": 56806582,
+      "prevent_self_review": true,
+      "can_admins_bypass": false,
+      "allowed_branches": ["main"]
+    },
+    {
+      "name": "github-pages",
+      "id": null,
+      "required_owner_id": 56806582,
+      "prevent_self_review": true,
+      "can_admins_bypass": false,
+      "allowed_branches": ["gh-pages"]
+    }
+  ],
+  "ruleset_designs": [
+    {
+      "name": "main-integrity",
+      "target": "branch",
+      "refs": ["refs/heads/main"],
+      "bypass_actors": [],
+      "rules": ["pull_request", "deletion", "non_fast_forward"],
+      "required_approving_review_count": 1,
+      "require_code_owner_review": true,
+      "bootstrap_codeowners": "* @kcook98765",
+      "dismiss_stale_reviews_on_push": true,
+      "require_last_push_approval": true,
+      "required_review_thread_resolution": true
+    },
+    {
+      "name": "main-validation",
+      "target": "branch",
+      "refs": ["refs/heads/main"],
+      "bypass_actors": [],
+      "rules": ["required_status_checks"],
+      "required_check_context": "qualification-validation",
+      "expected_ci_app_id": null,
+      "strict_required_status_checks_policy": true,
+      "enable_only_after_check_exists": true
+    },
+    {
+      "name": "pages-writer",
+      "target": "branch",
+      "refs": ["refs/heads/gh-pages"],
+      "bypass_actors": [{"actor_type": "Integration", "actor_id": null, "bypass_mode": "always"}],
+      "rules": ["update"],
+      "update_allows_fetch_and_merge": false
+    },
+    {
+      "name": "pages-integrity",
+      "target": "branch",
+      "refs": ["refs/heads/gh-pages"],
+      "bypass_actors": [],
+      "rules": ["deletion", "non_fast_forward", "required_linear_history"]
+    },
+    {
+      "name": "tags-creator",
+      "target": "tag",
+      "refs": ["refs/tags/script.ai.kodi.d3.fixture-*", "refs/tags/repository.ai.kodi.candidate.*-*"],
+      "bypass_actors": [{"actor_type": "Integration", "actor_id": null, "bypass_mode": "always"}],
+      "rules": ["creation"]
+    },
+    {
+      "name": "tags-other-creations",
+      "target": "tag",
+      "refs": ["~ALL"],
+      "exclude_refs": ["refs/tags/script.ai.kodi.d3.fixture-*", "refs/tags/repository.ai.kodi.candidate.*-*"],
+      "bypass_actors": [],
+      "rules": ["creation"]
+    },
+    {
+      "name": "tags-immutable",
+      "target": "tag",
+      "refs": ["~ALL"],
+      "bypass_actors": [],
+      "rules": ["update", "deletion"]
+    }
+  ],
+  "release_immutability": {"required_for_new_pilot_releases": true, "historical_production_release_unchanged": true},
+  "owner_approval": {
+    "maximum_lifetime_seconds": 3600,
+    "run_attempt": 1,
+    "comment_template": "APPROVE D3-QUALIFICATION sha256:<E> nonce:<N> repo-id:<test-repo-id> run:<run-id>",
+    "revocation_template": "REVOKE <E> <N>",
+    "control_issue_number": null,
+    "simulated_owner_records_accepted_for_network_writes": false
+  },
+  "retention": {
+    "minimum_days_after_final_review": 90,
+    "retain_until_separate_retirement_approval": true,
+    "automatic_artifact_deletion": false,
+    "cleanup_policy_approved": false
+  },
+  "all_pilot_cases": "NOT_EXECUTED",
+  "missing_ids_are_blockers": true,
+  "this_is_not_a_runtime_configuration_or_github_api_payload": true
+}

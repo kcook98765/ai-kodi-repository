@@ -167,9 +167,38 @@ def inspect_zip(blob, expected=None):
         require({n: sha(v) for n, v in files.items()} == expected, 'ZIP differs from reviewed runtime allowlist')
     return manifest, files
 
-def load_config():
-    config = json.loads((ROOT/'config/repository.json').read_text())
-    require(config['addon_id'] == 'repository.ai.kodi', 'Repository identity mismatch')
+def config_path(profile=None):
+    candidate = ROOT/'config/candidate-repository.json'
+    return candidate if profile == 'candidate' and candidate.exists() else ROOT/'config/repository.json'
+
+def ledger_path(profile=None):
+    return ROOT/('releases/candidate-manifest.json' if profile == 'candidate' and
+                 config_path(profile).name == 'candidate-repository.json' else 'releases/manifest.json')
+
+def load_config(profile=None):
+    config = json.loads(config_path(profile).read_text())
+    if profile == 'candidate' and config_path(profile).name == 'candidate-repository.json':
+        production = json.loads((ROOT/'config/repository.json').read_text())
+        context = config['candidate_context']
+        require(set(context) == {'task_id', 'production_config_sha256', 'production_ledger_sha256'},
+                'Malformed candidate identity context')
+        require(re.fullmatch('[0-9a-f]{32}', context['task_id']) and
+                config['addon_id'] == 'repository.ai.kodi.candidate.'+context['task_id'], 'Candidate identity mismatch')
+        require(context['production_config_sha256'] == sha((ROOT/'config/repository.json').read_bytes()) and
+                context['production_ledger_sha256'] == sha((ROOT/'releases/manifest.json').read_bytes()),
+                'Candidate production baseline changed')
+        require(production['addon_id'] == 'repository.ai.kodi' and config['lanes'] == production['lanes'],
+                'Candidate lane policy differs from production baseline')
+        candidate_url, production_url = urlsplit(config['base_url']), urlsplit(production['base_url'])
+        require((candidate_url.hostname.lower().rstrip('.'),candidate_url.port or 443) !=
+                (production_url.hostname.lower().rstrip('.'),production_url.port or 443)
+                and '%' not in config['base_url'] and '..' not in urlsplit(config['base_url']).path.split('/'),
+                'Candidate destination is not isolated')
+        history = json.loads(ledger_path(profile).read_text())
+        require(history.get('repository_id') == config['addon_id'], 'Candidate retention namespace mismatch')
+    else:
+        require('candidate_context' not in config, 'Candidate context requires the dedicated candidate profile/config')
+        require(config['addon_id'] == 'repository.ai.kodi', 'Repository identity mismatch')
     require(config['publication_authorized'] is False, 'This builder has no publication authority')
     url = urlsplit(config['base_url'])
     require(url.scheme == 'https' and url.hostname and not url.username and not url.password and
@@ -183,7 +212,8 @@ def load_config():
 
 def installer(config, profile):
     root = ET.Element('addon', {'id': config['addon_id'], 'version': config['fixture_version'] if profile == 'fixture' else config['version'],
-        'name': 'AI Kodi Repository' + (' LOCAL FIXTURE' if profile == 'fixture' else ''),
+        'name': 'AI Kodi Repository' + (' LOCAL FIXTURE' if profile == 'fixture' else
+                 ' LOCAL CANDIDATE' if 'candidate_context' in config else ''),
         'provider-name': config['provider']})
     requires = ET.SubElement(root, 'requires')
     ET.SubElement(requires, 'import', {'addon': 'xbmc.addon', 'version': '19.0.0'})
@@ -199,6 +229,7 @@ def installer(config, profile):
     meta = ET.SubElement(root, 'extension', {'point': 'xbmc.addon.metadata'})
     for tag, text in [('summary', 'Independent Kodi add-on distribution'),
                       ('description', 'Local qualification only. Not published.' if profile == 'fixture' else
+                       'LOCAL CANDIDATE. Unapproved packages for separately authorized testing only.' if 'candidate_context' in config else
                        'Reviewed independent add-ons, selected by Kodi version.'),
                       ('platform', 'all'), ('license', 'MIT'),
                       ('source', 'https://github.com/' + config['github_repository'])]:
@@ -249,7 +280,7 @@ def production_packages(config, profile='production'):
     require(profile in ('production', 'candidate'), 'Invalid intake profile')
     inputs = json.loads((ROOT/f'config/{profile}.json').read_text())
     require(inputs['external_dependencies'] == {}, 'External dependency snapshots need a separately reviewed adapter')
-    ledger = json.loads((ROOT/'releases/manifest.json').read_text())
+    ledger = json.loads(ledger_path(profile).read_text())
     packages = []
     for item in inputs['packages']:
         blob = safe_path(ROOT/'incoming', item['zip']).read_bytes()
@@ -257,6 +288,12 @@ def production_packages(config, profile='production'):
         record_path = safe_path(ROOT/'incoming', item['review_record'])
         require(sha(record_path.read_bytes()) == item['review_record_sha256'], 'Review record hash mismatch')
         record = json.loads(record_path.read_text())
+        if 'candidate_context' in config:
+            require(record.get('schema_version') == 2 and record.get('approval_policy') == 'strict-v1' and
+                    record.get('rights_approved') is False and record.get('release_approved') is False and
+                    all(record.get(k) == {'status':'pending'} for k in ('rights_review','technical_release','release_decision')) and
+                    all(c['static_accepted'] is False and c['runtime_accepted'] is False for c in record['compatibility'].values()),
+                    'Isolated candidate context accepts only truthful pending strict-v2 records')
         require(record['package_sha256'] == sha(blob) and record['fixture_only'] is False,
                 'Independent package approval/hash evidence missing')
         require(all(type(record[k]) is bool for k in ('release_approved','rights_approved')),
@@ -334,7 +371,7 @@ def write_output(path, data, immutable=False):
 
 def build(profile):
     require(profile in ('fixture', 'production', 'candidate'), 'Invalid profile')
-    config = load_config()
+    config = load_config(profile)
     output = ROOT/'dist'/profile
     site = output/'site'
     prefix = 'qualification/' if profile == 'fixture' else ('candidate/' if profile == 'candidate' else '')
@@ -359,7 +396,7 @@ def build(profile):
         for item in inputs:
             manifest, _ = inspect_zip(item['blob'])
             retained[(manifest.get('id'), manifest.get('version'))] = sha(item['blob'])
-        for old in json.loads((ROOT/'releases/manifest.json').read_text())['packages']:
+        for old in json.loads(ledger_path(profile).read_text())['packages']:
             require(retained.get((old['id'], old['version'])) == old['sha256'],
                     'Historical release removed or changed (including installer)')
     records = []
@@ -441,9 +478,9 @@ def build(profile):
     plan = {'schema':1, 'profile':profile, 'fixture_only':profile=='fixture',
             'publication_authorized':False, 'github_repository':config['github_repository'],
             'proposed_tag':('qualification-'+config['fixture_version'] if profile=='fixture' else 'repository-'+config['version']),
-            'config_sha256':sha((ROOT/'config/repository.json').read_bytes()),
+            'config_sha256':sha(config_path(profile).read_bytes()),
             'input_config_sha256':sha((ROOT/('config/candidate.json' if profile=='candidate' else 'config/production.json')).read_bytes()),
-            'retention_ledger_sha256':sha((ROOT/'releases/manifest.json').read_bytes()),
+            'retention_ledger_sha256':sha(ledger_path(profile).read_bytes()),
             'toolchain': {'python':sys.version.split()[0], 'zlib':zlib.ZLIB_RUNTIME_VERSION,
                           'builder_sha256':sha(Path(__file__).read_bytes()),
                           **{name+'_sha256':sha((Path(__file__).parent/filename).read_bytes())
@@ -462,6 +499,9 @@ def build(profile):
             'remote_actions_executed':[], 'live_https_verified':False}
     plan['release_blockers'] = sorted({blocker for item in inputs for blocker in item.get('release_blockers', [])}
         | ({'Private candidate profile cannot authorize publication'} if profile == 'candidate' else set()))
+    if 'candidate_context' in config:
+        plan['candidate_context'] = config['candidate_context']
+        plan['proposed_actions'] = ['Local candidate feed preparation only; no remote writes']
     write_output(output/'release-plan.json', json_bytes(plan))
     sums = ''.join(f'{sha(p.read_bytes())}  {p.name}\n' for p in sorted((output/'release-assets').iterdir()) if p.is_file())
     write_output(output/'SHA256SUMS', sums.encode())
@@ -470,14 +510,14 @@ def build(profile):
             'catalogs':catalogs, 'publication_authorized':False}
 
 def verify(profile):
-    config = load_config()
+    config = load_config(profile)
     output = ROOT/'dist'/profile
     site = output/'site'
     plan = json.loads((output/'release-plan.json').read_text())
     require(plan['publication_authorized'] is False and plan['profile'] == profile, 'Plan profile mismatch')
-    require(plan['config_sha256'] == sha((ROOT/'config/repository.json').read_bytes()), 'Stale configuration')
+    require(plan['config_sha256'] == sha(config_path(profile).read_bytes()), 'Stale configuration')
     require(plan['input_config_sha256'] == sha((ROOT/('config/candidate.json' if profile=='candidate' else 'config/production.json')).read_bytes()), 'Stale intake configuration')
-    require(plan['retention_ledger_sha256'] == sha((ROOT/'releases/manifest.json').read_bytes()), 'Stale retention ledger')
+    require(plan['retention_ledger_sha256'] == sha(ledger_path(profile).read_bytes()), 'Stale retention ledger')
     require(plan['toolchain']['builder_sha256'] == sha(Path(__file__).read_bytes()), 'Stale builder evidence')
     for name,filename in [('auditor', 'audit_candidate.py'), ('qualifier', 'qualify.py'),
                           ('preflight', 'check_publication.py')]:

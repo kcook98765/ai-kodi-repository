@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Operator-enrolled Phase A/B task, public GitHub GET and candidate preparation only",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "owner_authorization", "repository", "repository_id", "ref_kind", "ref", "lanes"],
+  "properties": {
+    "schema": {"const": 1},
+    "owner_authorization": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "repository": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_.-]{1,100}$"},
+    "repository_id": {"type": "integer", "minimum": 1},
+    "ref_kind": {"enum": ["branch", "tag", "commit"]},
+    "ref": {"type": "string", "minLength": 1, "maxLength": 200},
+    "expected_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "candidate_base_url": {"type": "string", "pattern": "^https://[^?#]+/$"},
+    "feed_members": {"type": "array", "maxItems": 25, "items": {"type": "object", "additionalProperties": false,
+      "required": ["task_id", "expected_digest"], "properties": {"task_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+      "expected_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}},
+    "lanes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["matrix", "nexus", "omega", "piers"]}}
+  }
+}

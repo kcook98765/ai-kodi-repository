@@ -116,6 +116,18 @@ promote candidate output or change production inputs to simulate approval.
 
 # Hosting arrangement
 
+Phase C adds an explicit **local candidate-only context** to the task-bound adapter;
+see [lifecycle preparation](LIFECYCLE-PREPARATION.md). A dedicated candidate config
+selects a distinct repository.ai.kodi.candidate.<task-id> installer and HTTPS origin,
+with a separate identity-bound candidate ledger. Original production config,
+installer source and production ledger remain immutable baseline evidence. Existing
+production/default fixture identity checks and the old candidate-retention failure
+remain unchanged without that explicit context. The independent auditor validates
+the context separately and reconstructs the complete site from frozen reviewed
+inputs. This context accepts pending strict-v2 records only, cannot activate
+first-release exceptions using an empty test history, and cannot pass publication
+preflight. No hosting, native operation or production approval is granted.
+
 Use GitHub Pages at `https://kcook98765.github.io/ai-kodi-repository/` for
 `catalogs/<lane>/addons.xml[.sha256]`, `packages/<id>/<id>-<version>.zip[.sha256]`
 and `artwork/<lane>/<id>/<asset>`. Deploy a generated static artifact with

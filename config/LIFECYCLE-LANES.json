@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "scope": "Kodi API static checks under the pinned Toolkit Python 3.10 language target; runtime interpreter compatibility unverified",
+  "stubs": {
+    "matrix": {"version": "19.0.3", "sha256": "aef7fb14ea2349d2ecf673a240e72e87aff0a34966e0ac9ec15ce90d2b7b84e3"},
+    "nexus": {"version": "20.0.1", "sha256": "e0e6df282bf89985b252f83711700043193be8c347f8478a104036e124eabba4"},
+    "omega": {"version": "21.0.0", "sha256": "b82cf094648ad5c75cf532bc377e1255c71730011d23d664b7df8ac96aedd3e0"},
+    "piers": {"status": "unverified", "reason": "No published or independently qualified Kodi 22 environment"}
+  }
+}
